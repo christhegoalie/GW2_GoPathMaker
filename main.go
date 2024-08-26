@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"errors"
+	"flag"
 	"fmt"
 	"gw2_markers_gen/categories"
 	"gw2_markers_gen/maps"
@@ -12,26 +13,34 @@ import (
 	"strings"
 )
 
-const PackageName = "ShellshotMarkerPack"
-const PackageRoot = PackageName
+const DefaultPackageName = "ShellshotMarkerPack"
 const buildPath = "build"
 
-var packageZipName = fmt.Sprintf("%s.zip", PackageName)
-var buildFolder = fmt.Sprintf("%s/%s/", buildPath, PackageName)
-var outputZipPath = fmt.Sprintf("%s/%s", buildPath, packageZipName)
+var srcDirectory string
 
-//outputTacoName := fmt.Sprintf("build/%s.taco", PackageName)
-
-var installScript = func() {}
+// Custom install function
+// Input: relative marker pack location (EX: build/MarkerPack.zip)
+// This is run on marker pack build, and can be used to automate marker pack installation
+// You can override this method with a local init file.
+// See installer.go.example for example code (copy the file as "installer.go")
+var installScript = func(packageFile string) {}
 
 func main() {
+	outputPackage := *flag.String("n", DefaultPackageName, "Output Package Name")
+	srcDirectory = *flag.String("s", DefaultPackageName, "Package directory containing definition")
+
+	//outputTacoName := fmt.Sprintf("%s.taco", outputPackage)
+	packageZipName := fmt.Sprintf("%s.zip", outputPackage)
+	outputZipPath := fmt.Sprintf("%s/%s", buildPath, packageZipName)
+	buildFolder := fmt.Sprintf("%s/%s/", buildPath, outputPackage)
+
 	maps.SetValidation(validateFile)
 	categories.SetValidation(validateFile)
 
 	os.RemoveAll(buildPath)
 	os.Mkdir(buildPath, fs.ModePerm)
 
-	packageCatagories, warnings, err := categories.Compile(fmt.Sprintf("%s/categories", PackageRoot))
+	packageCatagories, warnings, err := categories.Compile(fmt.Sprintf("%s/categories", srcDirectory))
 	if err != nil {
 		log.Println(err)
 		return
@@ -39,12 +48,12 @@ func main() {
 	for _, w := range warnings {
 		log.Println(w)
 	}
-	packageMaps, warnings := maps.Compile(packageCatagories, fmt.Sprintf("%s/maps", PackageRoot))
+	packageMaps, warnings := maps.Compile(packageCatagories, fmt.Sprintf("%s/maps", srcDirectory))
 	for _, w := range warnings {
 		log.Println(w)
 	}
 
-	CopyAssets(fmt.Sprintf("%s/assets", PackageRoot), fmt.Sprintf("%s/assets", buildFolder))
+	CopyAssets(fmt.Sprintf("%s/assets", srcDirectory), fmt.Sprintf("%s/assets", buildFolder))
 	categories.Save(packageCatagories, buildFolder)
 	maps.Save(packageMaps, buildFolder)
 	err = makeZip(buildFolder, outputZipPath)
@@ -53,7 +62,7 @@ func main() {
 	}
 	//makeTaco(outputZipName, outputTacoName)
 
-	installScript()
+	installScript(outputZipPath)
 }
 
 func makeZip(path string, dstfile string) error {
@@ -104,7 +113,7 @@ func addFiles(w *zip.Writer, basePath, baseInZip string) error {
 
 func validateFile(v string) string {
 	v = trim(v)
-	fname := fmt.Sprintf("%s/%s", PackageRoot, v)
+	fname := fmt.Sprintf("%s/%s", srcDirectory, v)
 	if _, err := os.Stat(fname); errors.Is(err, os.ErrNotExist) {
 		return fmt.Sprintf("File %s not found", v)
 	}
