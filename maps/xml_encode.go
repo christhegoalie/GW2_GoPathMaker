@@ -29,7 +29,7 @@ func Save(maps []Map, path string) error {
 
 func encodePoi(mapid int, p POI) string {
 	txt := strings.Builder{}
-	txt.WriteString(fmt.Sprintf(`<poi type="%s" xpos="%.4f" ypos="%.4f" zpos="%.4f" mapid="%d"`, p.CategoryReference, p.XPos, p.YPos, p.ZPos, mapid))
+	txt.WriteString(fmt.Sprintf(`<poi type="%s" xpos="%.6f" ypos="%.6f" zpos="%.6f" mapid="%d"`, p.CategoryReference, p.XPos, p.YPos, p.ZPos, mapid))
 	for key, val := range p.Keys {
 		txt.WriteString(fmt.Sprintf(" %s=%s", key, val))
 	}
