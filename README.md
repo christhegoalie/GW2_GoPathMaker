@@ -23,7 +23,7 @@
 1. Generate your package zip file: `./gw2_markers_gen -n XXXMarkerPack`
 
 ### .cat file format
-- Every line defines a key/value pairs describing category attributes. (See `https://www.gw2taco.com/2016/01/how-to-create-your-own-marker-pack.html` for a list of valid attributes)
+- Every line defines a key/value pair describing category attributes. (See `https://www.gw2taco.com/2016/01/how-to-create-your-own-marker-pack.html` for a list of valid attributes)
 - Key/Value MUST be separated by the `=` sign
 - All non Key/Value pair lines will be skipped
 ### .poi file format
