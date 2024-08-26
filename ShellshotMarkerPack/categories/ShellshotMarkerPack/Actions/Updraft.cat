@@ -1,0 +1,8 @@
+iconsize="0.5" 
+behavior="0" 
+alpha="1.0" 
+fadenear="600" 
+fadefar="10000" 
+heightoffset="1" 
+resetlength="60"
+iconfile="assets\icons\actions\updraft.png"

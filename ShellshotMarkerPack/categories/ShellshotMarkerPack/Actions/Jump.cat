@@ -1,0 +1,8 @@
+iconsize="0.2" 
+behavior="0" 
+alpha="0.5" 
+fadenear="200" 
+fadefar="200" 
+heightoffset="0.0" 
+resetlength="60"
+iconfile="assets\icons\actions\jump.png"
