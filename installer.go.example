@@ -1,0 +1,21 @@
+package main
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+)
+
+const MarkerDirectory string = `C:\Users\{User}\Documents\Guild Wars 2\addons\blishhud\markers`
+
+func init() {
+	installScript = func(packageFile string) {
+		fname := filepath.Base(packageFile)
+		targetFile := fmt.Sprintf(`%s\%s`, MarkerDirectory, fname)
+		os.Remove(targetFile)
+
+		b, _ := os.ReadFile(packageFile)
+		os.WriteFile(targetFile, b, fs.ModePerm)
+	}
+}
