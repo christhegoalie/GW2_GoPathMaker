@@ -1,2 +1,3 @@
 build
 installer.go
+gw2_markers_gen*
