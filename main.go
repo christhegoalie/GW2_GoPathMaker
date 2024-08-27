@@ -27,7 +27,7 @@ var installScript = func(packageFile string) {}
 
 func main() {
 	outputPackage := *flag.String("n", DefaultPackageName, "Output Package Name")
-	srcDirectory = *flag.String("s", DefaultPackageName, "Package directory containing definition")
+	srcDirectory = *flag.String("s", outputPackage, "Package directory containing definition")
 
 	//outputTacoName := fmt.Sprintf("%s.taco", outputPackage)
 	packageZipName := fmt.Sprintf("%s.zip", outputPackage)
