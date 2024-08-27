@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"gw2_markers_gen/categories"
 	"gw2_markers_gen/maps"
+	trailbuilder "gw2_markers_gen/trail_builder"
 	"io/fs"
 	"log"
 	"os"
@@ -40,6 +41,7 @@ func main() {
 	os.RemoveAll(buildPath)
 	os.Mkdir(buildPath, fs.ModePerm)
 
+	trailbuilder.CompileResources(srcDirectory)
 	packageCatagories, warnings, err := categories.Compile(fmt.Sprintf("%s/categories", srcDirectory))
 	if err != nil {
 		log.Println(err)

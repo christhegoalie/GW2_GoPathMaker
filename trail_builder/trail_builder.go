@@ -63,20 +63,28 @@ func lineToTriple(line string) (point, error) {
 }
 
 func LinesToTRLBytes(lines []string) ([]byte, error) {
-
 	if len(lines) == 0 {
 		return []byte{}, errors.New("invalid file, no mapid")
 	}
-	mapId, err := strconv.ParseInt(lines[0], 10, 32)
-	if err != nil {
-		return []byte{}, err
+
+	var mapId int64
+	var mapIdStr string
+	var ok bool
+	var err error
+
+	m := readMap(strings.TrimSpace(lines[0]))
+	if mapIdStr, ok = m["mapid"]; ok {
+		mapId, err = strconv.ParseInt(trim(mapIdStr), 10, 32)
+		if err != nil {
+			return []byte{}, err
+		}
 	}
 
 	out := make([]byte, 8+12*(len(lines)-1))
 	offset := 8
 	binary.LittleEndian.PutUint32(out[4:], uint32(mapId))
 	for i := 1; i < len(lines); i++ {
-		pt, err := lineToTriple(lines[i])
+		pt, err := lineToTriple(strings.TrimSpace(lines[i]))
 		if err != nil {
 			return out, fmt.Errorf("error on line %d: %w", i, err)
 		}
@@ -97,7 +105,7 @@ func TRLBytesToLines(bytes []byte) ([]string, error) {
 		return out, errors.New("invalid tlr file")
 	}
 	mapid := binary.LittleEndian.Uint32(bytes[4:])
-	out = append(out, fmt.Sprintf("%d", mapid))
+	out = append(out, fmt.Sprintf("mapid=%d", mapid))
 	for i := 8; i < len(bytes); i += 12 {
 		p := point{
 			x: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
@@ -108,4 +116,44 @@ func TRLBytesToLines(bytes []byte) ([]string, error) {
 	}
 
 	return out, nil
+}
+
+// Read a space seperated line of key value pairs seperated by "=", and return a map
+func readMap(line string) map[string]string {
+	out := make(map[string]string)
+	needEqual := true
+	quoted := false
+	key := ""
+	tmp := strings.Builder{}
+	for i := 0; i < len(line); i++ {
+		if needEqual {
+			if line[i] == '=' {
+				if tmp.Len() == 0 {
+					continue
+				}
+				key = tmp.String()
+				tmp.Reset()
+				needEqual = false
+			} else {
+				tmp.WriteByte(line[i])
+			}
+		} else {
+			if !quoted && line[i] == ' ' {
+				needEqual = true
+				out[key] = tmp.String()
+				tmp.Reset()
+				key = ""
+				continue
+			}
+
+			tmp.WriteByte(line[i])
+			if line[i] == '"' {
+				quoted = !quoted
+			}
+		}
+	}
+	if key != "" {
+		out[key] = tmp.String()
+	}
+	return out
 }
