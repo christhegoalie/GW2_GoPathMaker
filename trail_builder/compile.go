@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -39,6 +40,7 @@ func CompileResources(srcPath string) error {
 			continue
 		}
 
+		os.MkdirAll(filepath.Dir(dstPath), fs.ModePerm)
 		err = os.WriteFile(dstPath, fileData, fs.ModePerm)
 		if err != nil {
 			log.Printf("Error saving compiled resource: %s, Error: %s", f, err.Error())
