@@ -50,6 +50,9 @@ func readTrails(categories []categories.Category, fileName string) ([]Trail, []s
 	}
 	for ; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
 		trail, newWarns, err := parseTrail(category, line)
 		if err != nil {
 			return trails, warns, err
@@ -87,6 +90,9 @@ func readPOIs(categories []categories.Category, fileName string) ([]POI, []strin
 
 	for ; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
 		poi, newWarns, err := parsePoi(category, line)
 		if err != nil {
 			return pois, warns, err
@@ -100,15 +106,42 @@ func readPOIs(categories []categories.Category, fileName string) ([]POI, []strin
 
 // Read a space seperated line of key value pairs seperated by "=", and return a map
 func readMap(line string) map[string]string {
-	m := make(map[string]string)
-	items := strings.Split(line, " ")
-	for _, item := range items {
-		pair := strings.Split(item, "=")
-		if len(pair) == 2 {
-			m[strings.TrimSpace(pair[0])] = strings.TrimSpace(pair[1])
+	out := make(map[string]string)
+	needEqual := true
+	quoted := false
+	key := ""
+	tmp := strings.Builder{}
+	for i := 0; i < len(line); i++ {
+		if needEqual {
+			if line[i] == '=' {
+				if tmp.Len() == 0 {
+					continue
+				}
+				key = tmp.String()
+				tmp.Reset()
+				needEqual = false
+			} else {
+				tmp.WriteByte(line[i])
+			}
+		} else {
+			if !quoted && line[i] == ' ' {
+				needEqual = true
+				out[key] = tmp.String()
+				tmp.Reset()
+				key = ""
+				continue
+			}
+
+			tmp.WriteByte(line[i])
+			if line[i] == '"' {
+				quoted = !quoted
+			}
 		}
 	}
-	return m
+	if key != "" {
+		out[key] = tmp.String()
+	}
+	return out
 }
 
 // Return xpos, ypos, zpos, or an error from a line (read from file )if any issue is detected
