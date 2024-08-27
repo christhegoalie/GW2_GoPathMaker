@@ -8,7 +8,7 @@
 # Building the default marker pack from scratch
 1. `go build`
 1. `./gw2_markers_gen -n ShellshotMarkerPack`
-1. copy build/ShellshotMarkerPack.zip to your blish/taco marker pack directory
+1. copy build/ShellshotMarkerPack.zip to your blish/taco marker pack directory (Typically `C:\Users\{user}\Documents\Guild Wars 2\addons\blishhud\markers`)
 
 ## Build your own marker pack
 1. Build the package generator: `go build`
