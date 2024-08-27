@@ -20,7 +20,7 @@ const buildPath = "build"
 var srcDirectory string
 
 // Custom install function
-// Input: relative marker pack location (EX: build/MarkerPack.zip)
+// Input: relative marker pack location (EX: build/MarkerPack.taco)
 // This is run on marker pack build, and can be used to automate marker pack installation
 // You can override this method with a local init file.
 // See installer.go.example for example code (copy the file as "installer.go")
@@ -30,8 +30,7 @@ func main() {
 	outputPackage := *flag.String("n", DefaultPackageName, "Output Package Name")
 	srcDirectory = *flag.String("s", outputPackage, "Package directory containing definition")
 
-	//outputTacoName := fmt.Sprintf("%s.taco", outputPackage)
-	packageZipName := fmt.Sprintf("%s.zip", outputPackage)
+	packageZipName := fmt.Sprintf("%s.taco", outputPackage)
 	outputZipPath := fmt.Sprintf("%s/%s", buildPath, packageZipName)
 	buildFolder := fmt.Sprintf("%s/%s/", buildPath, outputPackage)
 
