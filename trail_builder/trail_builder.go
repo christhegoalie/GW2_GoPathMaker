@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -63,6 +64,7 @@ func lineToTriple(line string) (point, error) {
 }
 
 func LinesToTRLBytes(lines []string) ([]byte, error) {
+	skipped := 0
 	if len(lines) == 0 {
 		return []byte{}, errors.New("invalid file, no mapid")
 	}
@@ -86,12 +88,17 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	for i := 1; i < len(lines); i++ {
 		pt, err := lineToTriple(strings.TrimSpace(lines[i]))
 		if err != nil {
-			return out, fmt.Errorf("error on line %d: %w", i, err)
+			skipped += 12
+			log.Printf("error on line %d: %s", i, err.Error())
+			continue
 		}
 		binary.LittleEndian.PutUint32(out[offset:], math.Float32bits(float32(pt.x)))
 		binary.LittleEndian.PutUint32(out[offset+4:], math.Float32bits(float32(pt.y)))
 		binary.LittleEndian.PutUint32(out[offset+8:], math.Float32bits(float32(pt.z)))
 		offset += 12
+	}
+	if skipped != 0 {
+		return out[:len(out)-skipped], nil
 	}
 	return out, nil
 }
