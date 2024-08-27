@@ -49,3 +49,10 @@
 - Key/Value MUST be separated by the `=` sign
 - The file MUST contain the `id` key
 - All other information in the file will be skipped
+### .rtrl file format
+- All Lines MUST be a list of Key/Value Pairs seperated by the space character
+- Key/Values MUST be seperated by the `=` sign
+- Line 1 MUST contain the `mapid` key (and other keys will be ignored)
+- Subsequent lines MUST contain X,Y,Z position information (as copied using the "Marker Pack Assistant" module from blish)
+- All Other Keys are ignored
+- Lines without position information are skipped
