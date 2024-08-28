@@ -1,2 +1,3 @@
 category=ShellshotMarkerPack.Actions.Start
 trailData="assets/trails/janthir_syntri/warclaw_path1.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
+trailData="assets/trails/janthir_syntri/warclaw_path2.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
