@@ -1,5 +1,8 @@
 # File structure based TACO pathing generation tool for Guild Wars 2.
 
+## Download the latest Marker Pack
+[Download Latest Marker Pack](https://github.com/christhegoalie/GW2_GoPathMaker/releases/latest/download/ShellshotMarkerPack.taco)
+
 # Building
 
 ## Requires GO Version 1.21 or higher
