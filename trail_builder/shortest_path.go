@@ -1,6 +1,7 @@
 package trailbuilder
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"math"
@@ -33,7 +34,12 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 			p[i+1] = poi
 		}
 		p.sort()
+		ct := 0
 		for !p.optimize() {
+			ct++
+			if ct > 10000 {
+				return errors.New("maximum optimizations exceeded")
+			}
 		}
 
 		if dist := p.Distance(); dist < min {
@@ -76,30 +82,32 @@ func (p path) Distance() float64 {
 }
 
 func (p path) trySwap(i, j int) bool {
-	//Prev to first
-	orig := p[i-1].Distance(p[i])
-	new := p[i-1].Distance(p[j])
 
-	if j == i+1 {
-		//Distance between swapped nodes
-		orig += p[i].Distance(p[j])
-		new += p[j].Distance(p[i])
-	} else {
-		//node to middle list
-		orig += p[i].Distance(p[i+1])
-		new += p[j].Distance(p[i+1])
-		//middle list to second node
-		orig += p[j-1].Distance(p[j])
-		new += p[j-1].Distance(p[i])
+	//Note: non-directed graph, so no need to compute parts of the path that don't change
+	first := i
+	second := j
+
+	var delta float64
+
+	//Remove segments
+	for r := i - 1; r < j+1; r++ {
+		if r+1 < len(p) {
+			delta -= p[r].Distance(p[r+1])
+		}
 	}
 
-	//If not at end, second node to rest of list
+	delta += p[i-1].Distance(p[j])
 	if j+1 < len(p) {
-		orig += p[j].Distance(p[j+1])
-		new += p[i].Distance(p[j+1])
+		delta += p[first].Distance(p[j+1])
 	}
-	if new < orig {
-		p[i], p[j] = p[j], p[i]
+	for r := j; r > i-1; r-- {
+		delta += p[r].Distance(p[r-1])
+	}
+
+	if delta < 0 {
+		for i, j := first, second; i < j; i, j = i+1, j-1 {
+			p[i], p[j] = p[j], p[i]
+		}
 		return true
 	}
 	return false
@@ -126,7 +134,7 @@ func (p path) sort() {
 	}
 }
 
-// returns true of no changes
+// returns true of no changes made
 func (p path) optimize() bool {
 	done := true
 	for i := 1; i < len(p)-1; i++ {
@@ -136,18 +144,6 @@ func (p path) optimize() bool {
 			}
 			if p.trySwap(i, j) {
 				done = false
-			}
-		}
-	}
-	if !done {
-		for i := len(p) - 1; i > 0; i-- {
-			for j := i + 1; j < len(p); j++ {
-				if i == j {
-					panic("unexpected")
-				}
-				if p.trySwap(i, j) {
-					done = false
-				}
 			}
 		}
 	}
