@@ -133,7 +133,7 @@ func (src point) Distance(dst point) float64 {
 	if diffZ > 0 {
 		diffZ *= 4
 	} else if diffZ < 0 {
-		diffZ /= 4
+		diffZ /= 2
 	}
 	return math.Sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
 }
