@@ -62,15 +62,8 @@ func compileAutoPaths(srcPath string) error {
 		dstPath := dstRoot + strings.TrimPrefix(f, filesPath)
 		dstPath = strings.TrimSuffix(dstPath, CompiledAutoTrailExtension) + TrailExtension
 
-		//srcInfo, err := os.Stat(srcPath)
-		//if err != nil {
-		//	return err
-		//}
-		//dstInfo, err := os.Stat(dstPath)
-		//Skip recompiling the resource if no changes have been made
-		//if err == nil && dstInfo.ModTime().After(srcInfo.ModTime()) {
-		//	continue
-		//}
+		dstFileInfo, err := os.Stat(dstPath)
+		checkCompileTime := err == nil
 
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -100,10 +93,27 @@ func compileAutoPaths(srcPath string) error {
 		if err != nil {
 			return err
 		}
-		barriers := readPointGroups(mapPath, "barriers.txt")
-		waypoints := readPoints(mapPath, "waypoints.txt")
-		paths := readPointGroups(mapPath, "paths.txt")
-		pois := readPoints(mapPath, fileName)
+
+		barrierFile := fmt.Sprintf("%s/%s", mapPath, "barriers.txt")
+		waypointsFile := fmt.Sprintf("%s/%s", mapPath, "waypoints.txt")
+		pathsFile := fmt.Sprintf("%s/%s", mapPath, "paths.txt")
+		poiFile := fmt.Sprintf("%s/%s", mapPath, fileName)
+
+		barriers := readPointGroups(barrierFile)
+		waypoints := readPoints(waypointsFile)
+		paths := readPointGroups(pathsFile)
+		pois := readPoints(poiFile)
+
+		if checkCompileTime {
+			lastCompile := dstFileInfo.ModTime()
+			if !fileChangedSince(lastCompile, dstPath) &&
+				!fileChangedSince(lastCompile, barrierFile) &&
+				!fileChangedSince(lastCompile, waypointsFile) &&
+				!fileChangedSince(lastCompile, pathsFile) &&
+				!fileChangedSince(lastCompile, poiFile) {
+				continue
+			}
+		}
 
 		os.MkdirAll(filepath.Dir(dstPath), fs.ModePerm)
 		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, dstPath)
