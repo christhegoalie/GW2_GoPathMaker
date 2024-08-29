@@ -61,7 +61,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//makeTaco(outputZipName, outputTacoName)
 
 	installScript(outputZipPath)
 }
