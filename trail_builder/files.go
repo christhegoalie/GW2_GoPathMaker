@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const MapsDir = "maps"
@@ -31,10 +32,9 @@ func readFiles(path string, extension string) []string {
 	return files
 }
 
-func readPoints(fpath string, fname string) []point {
-	fname = fmt.Sprintf("%s/%s", fpath, fname)
+func readPoints(filePath string) []point {
 	out := []point{}
-	data, err := os.ReadFile(fname)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Println(err)
 	}
@@ -55,10 +55,9 @@ func readPoints(fpath string, fname string) []point {
 	}
 	return out
 }
-func readPointGroups(fpath string, fname string) map[string]pointGroup {
-	fname = fmt.Sprintf("%s/%s", fpath, fname)
+func readPointGroups(filePath string) map[string]pointGroup {
 	out := make(map[string]pointGroup)
-	data, err := os.ReadFile(fname)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Println(err)
 	}
@@ -120,4 +119,12 @@ func getPosition(m map[string]string) (float64, float64, float64, error) {
 		return x, y, z, errors.New("invalid zpos")
 	}
 	return x, y, z, nil
+}
+
+func fileChangedSince(timestamp time.Time, filePath string) bool {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return true
+	}
+	return info.ModTime().After(timestamp)
 }
