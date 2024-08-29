@@ -1,6 +1,2 @@
 category=ShellshotMarkerPack.Actions.Start
-trailData="assets/trails/janthir_lowlands/warclaw_path1.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
-trailData="assets/trails/janthir_lowlands/warclaw_path2.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
-trailData="assets/trails/janthir_lowlands/warclaw_path3.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
-trailData="assets/trails/janthir_lowlands/warclaw_path4.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
-trailData="assets/trails/janthir_lowlands/warclaw_path5.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
+trailData="assets/trails/janthir_lowlands/warclawcaches.trl" color="ffffffff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"
