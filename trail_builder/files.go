@@ -38,11 +38,17 @@ func readPoints(fpath string, fname string) []point {
 	if err != nil {
 		log.Println(err)
 	}
-	for _, s := range strings.Split(string(data), "\n") {
+	for i, s := range strings.Split(string(data), "\n") {
+		s = trim(s)
+		if s == "" {
+			continue
+		}
 		vals := readMap(s, ' ')
 		x, y, z, e := getPosition(vals)
 		if e != nil {
-			log.Println("Unknown line: ", e.Error())
+			if i > 0 {
+				log.Println("Unknown line: ", e.Error())
+			}
 			continue
 		}
 		out = append(out, point{x: x, y: y, z: z})
@@ -60,6 +66,9 @@ func readPointGroups(fpath string, fname string) map[string]pointGroup {
 	lines := strings.Split(string(data), "\n")
 	for _, s := range lines {
 		s = trim(s)
+		if s == "" {
+			continue
+		}
 		vals := readMap(s, ' ')
 		x, y, z, e := getPosition(vals)
 		if e != nil {
