@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+type pointGroup []point
 type point struct {
 	x, y, z float64
 }
@@ -75,7 +76,7 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	var ok bool
 	var err error
 
-	m := readMap(strings.TrimSpace(lines[0]))
+	m := readMap(strings.TrimSpace(lines[0]), ' ')
 	if mapIdStr, ok = m["mapid"]; ok {
 		mapId, err = strconv.ParseInt(trim(mapIdStr), 10, 32)
 		if err != nil {
@@ -160,7 +161,7 @@ func TRLBytesToPOIs(category string, bytes []byte) (int, []maps.POI, error) {
 }
 
 // Read a space seperated line of key value pairs seperated by "=", and return a map
-func readMap(line string) map[string]string {
+func readMap(line string, delim byte) map[string]string {
 	out := make(map[string]string)
 	needEqual := true
 	quoted := false
@@ -179,9 +180,9 @@ func readMap(line string) map[string]string {
 				tmp.WriteByte(line[i])
 			}
 		} else {
-			if !quoted && line[i] == ' ' {
+			if !quoted && line[i] == delim {
 				needEqual = true
-				out[key] = tmp.String()
+				out[key] = trim(tmp.String())
 				tmp.Reset()
 				key = ""
 				continue
@@ -194,7 +195,7 @@ func readMap(line string) map[string]string {
 		}
 	}
 	if key != "" {
-		out[key] = tmp.String()
+		out[key] = trim(tmp.String())
 	}
 	return out
 }
