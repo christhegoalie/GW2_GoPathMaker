@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"math"
 	"os"
 	"slices"
@@ -45,13 +46,14 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 		}
 		p.sort()
 		ct := 0
-		p.Distance(true, true)
+		dist := p.Distance(true, true)
+		log.Printf("Begin Optimization: %d", mapid)
 		for {
 			opt1 := p.optimize(true)
 			opt2 := p.optimize(false)
-			//newDist := p.Distance(true, true)
-			//log.Printf("Optimized distance %.2f to %.2f", dist, newDist)
-			//dist = newDist
+			newDist := p.Distance(true, true)
+			log.Printf("Optimized distance %.2f to %.2f", dist, newDist)
+			dist = newDist
 			if opt1 && opt2 {
 				break
 			}
@@ -60,7 +62,7 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 				return errors.New("maximum optimizations exceeded")
 			}
 		}
-		//log.Println("Optimization complete")
+		log.Printf("Optimization Complete: %d", mapid)
 
 		if dist := p.Distance(true, true); dist < min {
 			minPath = p
@@ -73,11 +75,13 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 		final = append(final, minPath[i])
 		if i+1 < len(minPath) {
 			if minPath[i].barrier(minPath[i+1]) {
-				takePath, ok := minPath[i].findPath(minPath[i+1])
+				takenPaths, ok := minPath[i].findPath(minPath[i+1])
 				if !ok {
 					panic("unexpected missing path")
 				}
-				final = append(final, takePath...)
+				for _, p := range takenPaths {
+					final = append(final, p.points...)
+				}
 			} else if i+1 < len(minPath) {
 				dist := minPath[i].Distance(minPath[i+1], false, false)
 
@@ -254,9 +258,9 @@ func (src point) CalcDistance(dst point) float64 {
 	diffY := dst.y - src.y
 	diffZ := dst.z - src.z
 	if diffZ > 0 {
-		diffZ *= 4
+		diffZ *= 1.5
 	} else if diffZ < 0 {
-		diffZ /= 2
+		diffZ /= 1.5
 	}
 	return math.Sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
 }
@@ -288,14 +292,25 @@ func (src point) Distance(dst point, allowWaypoints bool, bypassBarriers bool) f
 	return pathDistance
 }
 
-func (src point) TakePath(path []point) (float64, point) {
+func (t typedGroup) IsMushroom() bool {
+	return t.Type == GT_Mushroom
+}
+func (src point) TakePath(path []typedGroup) (float64, point) {
 	var out float64
-	for i := 0; i < len(path); i++ {
-		out += src.CalcDistance(path[i])
-		src = path[i]
+	for _, p := range path {
+		if p.IsMushroom() {
+			out += mushroomCost
+			src = p.points.last()
+		} else {
+			for _, item := range p.points {
+				out += src.CalcDistance(item)
+				src = item
+			}
+		}
 	}
 	return out, src
 }
+
 func (src point) barrier(dst point) bool {
 	for _, b := range glBarriers {
 		if len(b.points) != 2 {
@@ -312,69 +327,104 @@ func (src point) barrier(dst point) bool {
 	return false
 }
 
-func (src point) findPath(dst point) ([]point, bool) {
-	var found bool
-	var returnPath []point
-	var forward bool
-	minDist := math.MaxFloat64
+func (src path) first() point {
+	return src[0]
+}
+func (src path) last() point {
+	return src[len(src)-1]
+}
 
-	for _, p := range glPaths {
-		if len(p.points) == 0 {
-			continue
-		}
-
-		//Don't try to recursively take the same path
-		if dst == p.points[0] || dst == p.points[len(p.points)-1] {
-			continue
-		}
-
-		//Check if following the path works
-		if !src.barrier(p.points[0]) && !p.points[len(p.points)-1].barrier(dst) {
-			var dist float64
-			//Since mushroom time is mostly static, we give them a static weight
-			if p.Type == GT_Mushroom {
-				dist = mushroomCost
-			} else {
-				//Allow waypointing to reach the path, but not to go from the path end to the point
-				//Don't bypass a barrier to reach the path (in this case..another path should be found)
-				//Do allow searching for another path to bypass barriers after the first
-				dist = src.Distance(p.points[0], true, false) + p.points[len(p.points)-1].Distance(dst, false, true)
-				for i := 0; i < len(p.points)-1; i++ {
-					dist += p.points[i].CalcDistance(p.points[i+1])
-				}
-			}
-			if dist < minDist {
-				minDist = dist
-				returnPath = p.points
-				forward = true
+func (t typedGroup) Equals(t1 typedGroup) bool {
+	return t.name == t1.name
+}
+func availablePaths(usedList []typedGroup) []typedGroup {
+	out := make([]typedGroup, 0)
+	for _, global := range glPaths {
+		found := false
+		for _, local := range usedList {
+			if local.Equals(global) {
 				found = true
+				break
+			}
+		}
+		if !found {
+			out = append(out, global)
+		}
+	}
+	return out
+}
+
+func (t typedGroup) Reverse() typedGroup {
+	rev := make([]point, len(t.points))
+	copy(rev, t.points)
+	slices.Reverse(rev)
+	return typedGroup{
+		name:        t.name,
+		reverseName: t.reverseName,
+		Type:        t.Type,
+		points:      rev,
+	}
+}
+
+func (src point) pathTo(dst point, usedPaths []typedGroup) ([]typedGroup, bool) {
+	choices := []typedGroup{}
+	var addChoice = false
+	start := src
+	if len(usedPaths) > 0 {
+		start = usedPaths[len(usedPaths)-1].points.last()
+	}
+	possiblePaths := [][]typedGroup{}
+	for _, path := range availablePaths(usedPaths) {
+		if !start.barrier(path.points.first()) {
+			addChoice = true
+			if !path.points.last().barrier(dst) {
+				possiblePaths = append(possiblePaths, append(usedPaths, path))
+			}
+		}
+		if !path.IsMushroom() && !start.barrier(path.points.last()) {
+			addChoice = true
+			if !path.points.first().barrier(dst) {
+				possiblePaths = append(possiblePaths, append(usedPaths, path.Reverse()))
 			}
 		}
 
-		//Check if following the path in reverse works
-		// Mushroom paths can't go in reverse
-		if p.Type != GT_Mushroom && !src.barrier(p.points[len(p.points)-1]) && !p.points[0].barrier(dst) {
-			//Allow waypointing to reach the path, but not to go from the path end to the point
-			//Don't bypass a barrier to reach the path (in this case..another path should be found)
-			//Do allow searching for another path to bypass barriers after the first
-			dist := src.Distance(p.points[len(p.points)-1], true, false) + p.points[0].Distance(dst, false, true)
-			for i := len(p.points) - 1; i > 0; i-- {
-				dist += p.points[i].CalcDistance(p.points[i-1])
-			}
-			if dist < minDist {
-				minDist = dist
-				returnPath = p.points
-				forward = false
-				found = true
-			}
+		if addChoice {
+			choices = append(choices, path)
 		}
 	}
 
-	if !forward && found {
-		tmp := make([]point, len(returnPath))
-		copy(tmp, returnPath)
-		slices.Reverse(tmp)
-		return tmp, found
+	if len(possiblePaths) == 0 {
+		for _, choice := range choices {
+			newPaths, ok := src.pathTo(dst, append(usedPaths, choice))
+			if ok {
+				possiblePaths = append(possiblePaths, newPaths)
+			}
+		}
 	}
-	return returnPath, found
+	if len(possiblePaths) == 0 {
+		return []typedGroup{}, false
+	}
+	return cheapest(src, dst, possiblePaths), true
+}
+
+func calculatePathCost(src, dst point, group []typedGroup) float64 {
+	total, newSrc := src.TakePath(group)
+	return total + newSrc.Distance(dst, false, false)
+
+}
+func cheapest(src, dst point, groups [][]typedGroup) []typedGroup {
+	min := math.MaxFloat64
+	index := 0
+	for i, next := range groups {
+		cost := calculatePathCost(src, dst, next)
+		if cost < min {
+			index = i
+			min = cost
+		}
+	}
+	return groups[index]
+}
+
+func (src point) findPath(dst point) ([]typedGroup, bool) {
+	return src.pathTo(dst, make([]typedGroup, 0))
 }
