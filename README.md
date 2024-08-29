@@ -1,5 +1,20 @@
 # File structure based TACO pathing generation tool for Guild Wars 2.
 
+## Download the latest Marker Pack
+[Download Latest Marker Pack](https://github.com/christhegoalie/GW2_GoPathMaker/releases/latest/download/ShellshotMarkerPack.taco)
+
+## Features
+- Janthir Lowlands
+1. Warclaw Caches
+1. Buzzy Treetops Jumping Puzzle
+1. Vale Brazier Jumping Puzzle
+1. Hidden Achievments
+- Janthir Syntri
+1. Warclaw Caches
+1. Major Kodan Caches
+1. Charted Titan Ore Gather Nodes
+1. Rotten Titan Amber Gather Nodes
+
 # Building
 
 ## Requires GO Version 1.21 or higher
