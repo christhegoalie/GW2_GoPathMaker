@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"gw2_markers_gen/maps"
 	"log"
 	"math"
 	"strconv"
@@ -103,6 +104,19 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	return out, nil
 }
 
+func PointsToTrlBytes(mapId int, points []point) ([]byte, error) {
+	out := make([]byte, 8+12*(len(points)))
+	offset := 8
+	binary.LittleEndian.PutUint32(out[4:], uint32(mapId))
+	for _, p := range points {
+		binary.LittleEndian.PutUint32(out[offset:], math.Float32bits(float32(p.x)))
+		binary.LittleEndian.PutUint32(out[offset+4:], math.Float32bits(float32(p.y)))
+		binary.LittleEndian.PutUint32(out[offset+8:], math.Float32bits(float32(p.z)))
+		offset += 12
+	}
+	return out, nil
+}
+
 func TRLBytesToLines(bytes []byte) ([]string, error) {
 	out := make([]string, 0)
 	if len(bytes) < 8 {
@@ -123,6 +137,26 @@ func TRLBytesToLines(bytes []byte) ([]string, error) {
 	}
 
 	return out, nil
+}
+func TRLBytesToPOIs(category string, bytes []byte) (int, []maps.POI, error) {
+	out := make([]maps.POI, 0)
+	if len(bytes) < 8 {
+		return 0, out, errors.New("mapid header not found")
+	}
+	if (len(bytes)-8)%12 != 0 {
+		return 0, out, errors.New("invalid tlr file")
+	}
+	mapid := binary.LittleEndian.Uint32(bytes[4:])
+	for i := 8; i < len(bytes); i += 12 {
+		p := point{
+			x: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
+			y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
+			z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
+		}
+		out = append(out, maps.POI{CategoryReference: category, XPos: p.x, YPos: p.y, ZPos: p.z})
+	}
+
+	return int(mapid), out, nil
 }
 
 // Read a space seperated line of key value pairs seperated by "=", and return a map

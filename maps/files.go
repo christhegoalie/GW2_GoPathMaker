@@ -26,7 +26,7 @@ func readFiles(path string) []string {
 }
 
 // read/parse a .trail file into a list of POI structures
-func readTrails(categories []categories.Category, fileName string) ([]Trail, []string, error) {
+func ReadTrails(categories []categories.Category, fileName string) ([]Trail, []string, error) {
 	trails := []Trail{}
 	warns := []string{}
 
@@ -65,7 +65,7 @@ func readTrails(categories []categories.Category, fileName string) ([]Trail, []s
 }
 
 // read/parse a .poi file into a list of POI structures
-func readPOIs(categories []categories.Category, fileName string) ([]POI, []string, error) {
+func ReadPOIs(categories []categories.Category, fileName string) ([]POI, []string, error) {
 	pois := []POI{}
 	warns := []string{}
 
@@ -177,7 +177,7 @@ func getPosition(m map[string]string) (float64, float64, float64, error) {
 
 // Read the "mapinfo.txt" file from the map directory
 // Returns an error if the file is not present, or does not contain a map id (resulting in no markers being generated)
-func readMapInfo(path string) (int, string, error) {
+func ReadMapInfo(path string) (int, string, error) {
 	var id *int
 	var name *string
 	var fname = fmt.Sprintf("%s/%s", path, infoFileName)
@@ -217,7 +217,7 @@ func readMapInfo(path string) (int, string, error) {
 
 // Walks the current Maps directory generating all POI and Trail definitions
 func compileMap(categories []categories.Category, path string) (Map, []string, error) {
-	id, name, err := readMapInfo(path)
+	id, name, err := ReadMapInfo(path)
 	if err != nil {
 		return Map{}, nil, err
 	}
@@ -226,14 +226,14 @@ func compileMap(categories []categories.Category, path string) (Map, []string, e
 	files := readFiles(path)
 	for _, item := range files {
 		if strings.HasSuffix(item, poiExtension) {
-			newPoi, newWarns, err := readPOIs(categories, item)
+			newPoi, newWarns, err := ReadPOIs(categories, item)
 			if err != nil {
 				return out, warns, err
 			}
 			warns = append(warns, newWarns...)
 			out.POIs = append(out.POIs, newPoi...)
 		} else if strings.HasSuffix(item, trailExtension) {
-			newTrails, newWarns, err := readTrails(categories, item)
+			newTrails, newWarns, err := ReadTrails(categories, item)
 			if err != nil {
 				return out, warns, err
 			}
