@@ -1,0 +1,4 @@
+xpos="-361.323" ypos="83.34927" zpos="59.65215" name="path1"
+xpos="-360.8561" ypos="107.3107" zpos="140.2572" name="path1"
+xpos="-404.144" ypos="101.5459" zpos="227.3331" name="path1"
+xpos="-348.2968" ypos="79.12507" zpos="279.508" name="path1"

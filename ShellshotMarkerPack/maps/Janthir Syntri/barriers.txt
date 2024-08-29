@@ -1,0 +1,4 @@
+xpos="-59.35345" ypos="107.2805" zpos="775.3572" name="east sulfur"
+xpos="-157.0944" ypos="157.5086" zpos="170.1783" name="east sulfur"
+xpos="-157.0944" ypos="157.5086" zpos="170.1783" name="south sulfur"
+xpos="-754.9135" ypos="121.0209" zpos="56.96074" name="south sulfur"
