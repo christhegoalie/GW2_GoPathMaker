@@ -11,7 +11,20 @@ import (
 	"strings"
 )
 
-type pointGroup []point
+type objectType int
+
+const (
+	Type_Unknown objectType = iota
+	BT_Wall
+	BT_DownOnly
+
+	GT_Mushroom
+)
+
+type typedGroup struct {
+	points []point
+	Type   objectType
+}
 type point struct {
 	x, y, z float64
 }

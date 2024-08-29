@@ -55,8 +55,9 @@ func readPoints(filePath string) []point {
 	}
 	return out
 }
-func readPointGroups(filePath string) map[string]pointGroup {
-	out := make(map[string]pointGroup)
+
+func readTypedGroup(filePath string) map[string]typedGroup {
+	out := make(map[string]typedGroup)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Println(err)
@@ -78,10 +79,24 @@ func readPointGroups(filePath string) map[string]pointGroup {
 
 		if name, ok := vals["name"]; ok {
 			if v, ok := out[name]; ok {
-				v = append(v, pt)
+				v.points = append(v.points, pt)
 				out[name] = v
 			} else {
-				out[name] = []point{pt}
+				v := typedGroup{
+					points: []point{pt},
+					Type:   Type_Unknown,
+				}
+				if typeString, ok := vals["type"]; ok {
+					switch strings.ToLower(typeString) {
+					case "downonly":
+						v.Type = BT_DownOnly
+					case "wall":
+						v.Type = BT_Wall
+					case "mushroom":
+						v.Type = GT_Mushroom
+					}
+				}
+				out[name] = v
 			}
 		} else {
 			log.Println("Line missing 'name' field: ")

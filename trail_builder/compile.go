@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+var forceRecompile bool = false
+
 func compilePaths(srcPath string) error {
 	filesPath := fmt.Sprintf("%s/%s/", srcPath, CompiledAssetsDir)
 	dstRoot := fmt.Sprintf("%s/%s/", srcPath, AssetsDir)
@@ -60,7 +62,8 @@ func compileAutoPaths(srcPath string) error {
 
 	for _, f := range files {
 		dstPath := dstRoot + strings.TrimPrefix(f, filesPath)
-		dstPath = strings.TrimSuffix(dstPath, CompiledAutoTrailExtension) + TrailExtension
+		baseDstPath := strings.TrimSuffix(dstPath, CompiledAutoTrailExtension)
+		dstPath = baseDstPath + TrailExtension
 
 		dstFileInfo, err := os.Stat(dstPath)
 		checkCompileTime := err == nil
@@ -99,24 +102,26 @@ func compileAutoPaths(srcPath string) error {
 		pathsFile := fmt.Sprintf("%s/%s", mapPath, "paths.txt")
 		poiFile := fmt.Sprintf("%s/%s", mapPath, fileName)
 
-		barriers := readPointGroups(barrierFile)
+		barriers := readTypedGroup(barrierFile)
 		waypoints := readPoints(waypointsFile)
-		paths := readPointGroups(pathsFile)
+		paths := readTypedGroup(pathsFile)
 		pois := readPoints(poiFile)
 
 		if checkCompileTime {
 			lastCompile := dstFileInfo.ModTime()
-			if !fileChangedSince(lastCompile, dstPath) &&
-				!fileChangedSince(lastCompile, barrierFile) &&
-				!fileChangedSince(lastCompile, waypointsFile) &&
-				!fileChangedSince(lastCompile, pathsFile) &&
-				!fileChangedSince(lastCompile, poiFile) {
-				continue
+			if !forceRecompile {
+				if !fileChangedSince(lastCompile, dstPath) &&
+					!fileChangedSince(lastCompile, barrierFile) &&
+					!fileChangedSince(lastCompile, waypointsFile) &&
+					!fileChangedSince(lastCompile, pathsFile) &&
+					!fileChangedSince(lastCompile, poiFile) {
+					continue
+				}
 			}
 		}
 
 		os.MkdirAll(filepath.Dir(dstPath), fs.ModePerm)
-		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, dstPath)
+		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, baseDstPath, TrailExtension)
 		if err != nil {
 			log.Printf("Error saving compiled resource: %s, Error: %s", f, err.Error())
 			continue
