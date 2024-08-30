@@ -44,8 +44,8 @@
 - Every directory under the maps directory MUST definte a map [see description below]
 #### `map` directory
 - No Directory structure is required
-- The root or subdirectory MAY contain any number of [.poi`](#.poi-file-extension) files
-- The root or subdirectory MAY contain any number of [.trail](#.trail-file-extension) files
+- The root or subdirectory MAY contain any number of [.poi](#poi-file-format) files
+- The root or subdirectory MAY contain any number of [.trail](#trail-file-format) files
 - MUST contain a `mapinfo.txt` file defining the mapid.
 - MAY contain a `barriers.txt` file for trail creation. (defines regions path generation is unable to cross)
 - MAY contain a `paths.txt` file for trail creation (defining a list of paths/shortcuts. Typically these are bouncing mushrooms or ways to bypass barriers)
@@ -69,11 +69,12 @@
 - All files/directories inside your marker pack root directory will be zipped into the output path file.
 - This can be used to add any custom data required
 
-### .cat file format
+### File Extensions
+#### cat file format
 - Every line defines a key/value pair describing category attributes. (See `https://www.gw2taco.com/2016/01/how-to-create-your-own-marker-pack.html` for a list of valid attributes)
 - Key/Value MUST be separated by the `=` sign
 - All non Key/Value pair lines will be skipped
-### .poi file format
+#### poi file format
 - Line 1 MUST reference a marker category present in your category directory. EX: `category=ShellshotMarkerPack.Janthir.GatherNodes.ChargedOre`
 - Every subsequent line references a single marker
 - Every marker line is defined as a list of Key/Value pairs
@@ -82,7 +83,7 @@
 - Every marker line MUST contain X,Y,Z position information (as copied using the "Marker Pack Assistant" module from blish)
 - Every marker line MAY overwrite marker attributes
 - Example Line: `xpos="-290.0943" ypos="32.79265" zpos="-283.0596" Behavior="0"`
-### .trail file format
+#### .trail file format
 - Line 1 MUST reference a marker category present in your category directory. EX: `category=ShellshotMarkerPack.Janthir.GatherNodes.ChargedOre`
 - Every subsequent line references a single marker
 - Every marker line is defined as a list of Key/Value pairs
@@ -91,19 +92,21 @@
 - Every marker line MUST contain the `trailData` key pointing to a `.trl` file. (See `https://www.gw2taco.com/2016/01/how-to-create-your-own-marker-pack.html` for trail creation)
 - Every marker line MAY overwrite marker attributes
 - Example Line: `trailData="assets/trails/janthir_lowlands/honeybey_jp.trl" color="ffffffff"`
-### mapinfo.txt format
+
+### File Definitions
+#### mapinfo.txt format
 - Every line defines a key/value pair describing map information
 - Key/Value MUST be separated by the `=` sign
 - The file MUST contain the `id` key
 - All other information in the file will be skipped
-### .rtrl file format
+#### .rtrl file format
 - All Lines MUST be a list of Key/Value Pairs seperated by the space character
 - Key/Values MUST be seperated by the `=` sign
 - Line 1 MUST contain the `mapid` key (and other keys will be ignored)
 - Subsequent lines MUST contain X,Y,Z position information (as copied using the "Marker Pack Assistant" module from blish)
 - All Other Keys are ignored
 - Lines without position information are skipped
-### .atrl
+#### .atrl
 - Every line defines a key/value pair describing map information
 - Key/Value MUST be separated by the `=` sign
 - The file MUST contain the `map` key
