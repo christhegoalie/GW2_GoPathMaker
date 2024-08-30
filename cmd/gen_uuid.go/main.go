@@ -36,7 +36,7 @@ func addUUID(fname string, skipLines int) error {
 
 	changed := false
 	for i := skipLines; i < len(lines); i++ {
-		if strings.Index(lines[i], `GUID="`) > 0 {
+		if !strings.Contains(lines[i], `GUID="`) {
 			lines[i] = fmt.Sprintf(`%s GUID="%s"`, lines[i], newUUID())
 			changed = true
 		}
@@ -85,10 +85,10 @@ func writeLines(fname string, lines []string) error {
 			if err != nil {
 				return err
 			}
-			_, err = buf.WriteString(l)
-			if err != nil {
-				return err
-			}
+		}
+		_, err := buf.WriteString(l)
+		if err != nil {
+			return err
 		}
 	}
 
