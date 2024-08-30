@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-const infoFileName = "mapinfo.txt"
-const poiExtension = ".poi"
-const trailExtension = ".trail"
-
 type Map struct {
 	MapName string
 	MapId   int

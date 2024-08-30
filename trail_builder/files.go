@@ -2,35 +2,12 @@ package trailbuilder
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
-
-const MapsDir = "maps"
-const AssetsDir = "assets"
-const CompiledAssetsDir = "compiled_assets"
-const CompiledTrailExtension = ".rtrl"
-const CompiledAutoTrailExtension = ".atrl"
-const TrailExtension = ".trl"
-
-// Recursively find all .trail and .poi files
-func readFiles(path string, extension string) []string {
-	items, _ := os.ReadDir(path)
-	files := []string{}
-	for _, item := range items {
-		fullPath := fmt.Sprintf("%s/%s", path, item.Name())
-		if item.IsDir() {
-			files = append(files, readFiles(fullPath, extension)...)
-		} else if strings.HasSuffix(item.Name(), extension) {
-			files = append(files, fullPath)
-		}
-	}
-	return files
-}
 
 func readPoints(filePath string) []point {
 	out := []point{}

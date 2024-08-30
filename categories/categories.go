@@ -2,6 +2,7 @@ package categories
 
 import (
 	"fmt"
+	"gw2_markers_gen/files"
 	"os"
 	"path/filepath"
 	"slices"
@@ -9,9 +10,6 @@ import (
 	"strings"
 	"unicode"
 )
-
-const fileName = "_markerCategories.xml"
-const fileExtension = ".cat"
 
 type Category struct {
 	Name        string
@@ -39,7 +37,7 @@ func encodeCategory(c Category) string {
 	return txt.String()
 }
 func Save(categories []Category, path string) error {
-	f, err := os.OpenFile(fmt.Sprintf(`%s/%s`, path, fileName), os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(fmt.Sprintf(`%s/%s`, path, files.OutputCategoryFile), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -66,7 +64,7 @@ func Compile(path string) ([]Category, []string, error) {
 			warns = append(warns, newWarns...)
 			name, displayName := getNameInfo(catName)
 			out = append(out, Category{Name: name, DisplayName: displayName, Children: newCats})
-		} else if strings.HasSuffix(item.Name(), fileExtension) {
+		} else if strings.HasSuffix(item.Name(), files.CategoryExtension) {
 			newCat, newWarns, err := readCategory(fmt.Sprintf("%s/%s", path, item.Name()))
 			if err != nil {
 				return out, warns, err

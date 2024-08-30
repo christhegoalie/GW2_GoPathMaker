@@ -211,8 +211,9 @@ func (p path) optimze(mapId int) error {
 				log.Println("Second Pass")
 				firstPass = false
 				bypassBarriers = true
+			} else {
+				break
 			}
-			break
 		}
 		ct++
 		if ct > 10000 {

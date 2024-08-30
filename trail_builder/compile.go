@@ -3,6 +3,7 @@ package trailbuilder
 import (
 	"errors"
 	"fmt"
+	"gw2_markers_gen/files"
 	"gw2_markers_gen/maps"
 	"io/fs"
 	"log"
@@ -14,13 +15,13 @@ import (
 var forceRecompile bool = false
 
 func compilePaths(srcPath string) error {
-	filesPath := fmt.Sprintf("%s/%s/", srcPath, CompiledAssetsDir)
-	dstRoot := fmt.Sprintf("%s/%s/", srcPath, AssetsDir)
-	files := readFiles(srcPath, CompiledTrailExtension)
+	filesPath := fmt.Sprintf("%s/%s/", srcPath, files.CompiledAssetsDirectory)
+	dstRoot := fmt.Sprintf("%s/%s/", srcPath, files.AssetsDirectory)
+	fileList := files.FilesByExtension(srcPath, files.CompiledTrailExtension)
 
-	for _, f := range files {
+	for _, f := range fileList {
 		dstPath := dstRoot + strings.TrimPrefix(f, filesPath)
-		dstPath = strings.TrimSuffix(dstPath, CompiledTrailExtension) + TrailExtension
+		dstPath = strings.TrimSuffix(dstPath, files.CompiledTrailExtension) + files.TrailExtension
 
 		srcInfo, err := os.Stat(srcPath)
 		if err != nil {
@@ -55,15 +56,15 @@ func compilePaths(srcPath string) error {
 }
 
 func compileAutoPaths(srcPath string) error {
-	filesPath := fmt.Sprintf("%s/%s/", srcPath, CompiledAssetsDir)
-	dstRoot := fmt.Sprintf("%s/%s/", srcPath, AssetsDir)
-	files := readFiles(srcPath, CompiledAutoTrailExtension)
-	mapsPath := fmt.Sprintf("%s/%s/", srcPath, MapsDir)
+	filesPath := fmt.Sprintf("%s/%s/", srcPath, files.CompiledAssetsDirectory)
+	dstRoot := fmt.Sprintf("%s/%s/", srcPath, files.AssetsDirectory)
+	fileList := files.FilesByExtension(srcPath, files.AutoTrailExtension)
+	mapsPath := fmt.Sprintf("%s/%s/", srcPath, files.MapsDirectory)
 
-	for _, f := range files {
+	for _, f := range fileList {
 		dstPath := dstRoot + strings.TrimPrefix(f, filesPath)
-		baseDstPath := strings.TrimSuffix(dstPath, CompiledAutoTrailExtension)
-		dstPath = baseDstPath + TrailExtension
+		baseDstPath := strings.TrimSuffix(dstPath, files.AutoTrailExtension)
+		dstPath = baseDstPath + files.TrailExtension
 
 		dstFileInfo, err := os.Stat(dstPath)
 		checkCompileTime := err == nil
@@ -97,9 +98,9 @@ func compileAutoPaths(srcPath string) error {
 			return err
 		}
 
-		barrierFile := fmt.Sprintf("%s/%s", mapPath, "barriers.txt")
-		waypointsFile := fmt.Sprintf("%s/%s", mapPath, "waypoints.txt")
-		pathsFile := fmt.Sprintf("%s/%s", mapPath, "paths.txt")
+		barrierFile := fmt.Sprintf("%s/%s", mapPath, files.BarriersFile)
+		waypointsFile := fmt.Sprintf("%s/%s", mapPath, files.WaypointsFile)
+		pathsFile := fmt.Sprintf("%s/%s", mapPath, files.PathsFile)
 		poiFile := fmt.Sprintf("%s/%s", mapPath, fileName)
 
 		barriers := readTypedGroup(barrierFile)
@@ -121,7 +122,7 @@ func compileAutoPaths(srcPath string) error {
 		}
 
 		os.MkdirAll(filepath.Dir(dstPath), fs.ModePerm)
-		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, baseDstPath, TrailExtension)
+		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, baseDstPath, files.TrailExtension)
 		if err != nil {
 			log.Printf("Error saving compiled resource: %s, Error: %s", f, err.Error())
 			continue

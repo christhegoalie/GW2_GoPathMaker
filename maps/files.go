@@ -4,26 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"gw2_markers_gen/categories"
+	"gw2_markers_gen/files"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 )
-
-// Recursively find all .trail and .poi files
-func readFiles(path string) []string {
-	items, _ := os.ReadDir(path)
-	files := []string{}
-	for _, item := range items {
-		fullPath := fmt.Sprintf("%s/%s", path, item.Name())
-		if item.IsDir() {
-			files = append(files, readFiles(fullPath)...)
-		} else if strings.HasSuffix(item.Name(), poiExtension) || strings.HasSuffix(item.Name(), trailExtension) {
-			files = append(files, fullPath)
-		}
-	}
-	return files
-}
 
 // read/parse a .trail file into a list of POI structures
 func ReadTrails(categories []categories.Category, fileName string) ([]Trail, []string, error) {
@@ -180,7 +166,7 @@ func getPosition(m map[string]string) (float64, float64, float64, error) {
 func ReadMapInfo(path string) (int, string, error) {
 	var id *int
 	var name *string
-	var fname = fmt.Sprintf("%s/%s", path, infoFileName)
+	var fname = fmt.Sprintf("%s/%s", path, files.MapInfoFile)
 
 	b, err := os.ReadFile(fname)
 	if err != nil {
@@ -223,16 +209,16 @@ func compileMap(categories []categories.Category, path string) (Map, []string, e
 	}
 	out := Map{MapId: id, MapName: name, POIs: []POI{}, Trails: []Trail{}}
 	warns := []string{}
-	files := readFiles(path)
-	for _, item := range files {
-		if strings.HasSuffix(item, poiExtension) {
+	fileList := files.FilesByExtension(path, files.MarkerPoiExtension, files.MarkerTrailExtension)
+	for _, item := range fileList {
+		if strings.HasSuffix(item, files.MarkerPoiExtension) {
 			newPoi, newWarns, err := ReadPOIs(categories, item)
 			if err != nil {
 				return out, warns, err
 			}
 			warns = append(warns, newWarns...)
 			out.POIs = append(out.POIs, newPoi...)
-		} else if strings.HasSuffix(item, trailExtension) {
+		} else if strings.HasSuffix(item, files.MarkerTrailExtension) {
 			newTrails, newWarns, err := ReadTrails(categories, item)
 			if err != nil {
 				return out, warns, err
