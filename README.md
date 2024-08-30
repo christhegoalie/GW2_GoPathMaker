@@ -29,10 +29,10 @@
 1. Build the package generator: `go build`
 1. Create a marker pack directory `XXXMarkerPack`
 1. Add your catagories directory. `XXXMarkerPack/categories`
-1. Define categories using your directory structure. Example: `XXXMarkerPack/categories/Janthir/Chests` generates the Category: `Janthir.Chests`
+1. Define categories using [Directory Structure](#categories-directory). Example: `XXXMarkerPack/categories/Janthir/Chests` generates the Category: `Janthir.Chests`
 1. Any edge category requiring configuration (including icons), may be defined using a [.cat](#cat-file-format) file instead
 1. Add your maps directory. `XXXMarkerPack/maps`
-1. Add a map you intend to add markers for: `XXXMarkerPack/maps/JanthirSyntri`
+1. Add a [map](#map-directory) you intend to add markers for: `XXXMarkerPack/maps/JanthirSyntri`
 1. Create [mapinfo.txt](mapinfotxt-format) in your map directory containing the map id. EX: `id=1554` (Can be easily found using the "Marker Pack Assistant" module from blish)
 1. Create any number of [.poi](#poi-file-format) and [.trail](#trail-file-format) files containing marker location information. (any sub directory structure may be used)
 1. Generate your package zip file: `./gw2_markers_gen -n XXXMarkerPack`
@@ -129,10 +129,12 @@
 - All lines sharing the same `name` key will be used as a pair with order defined by file order.
 - Lines may contain the [Type](#barrier-types) key
 - Example Barrier definition: 
-`xpos="100" ypos="0" zpos="50" name="barrier-1"`
-`xpos="100" ypos="0" zpos="50" name="barrier-1"`
-`xpos="10" ypos="0" zpos="0" name="barrier-1" type="downonly"`
-`xpos="10" ypos="0" zpos="100" name="barrier-1" type="downonly"`
+```
+xpos="100" ypos="0" zpos="50" name="barrier-1"
+xpos="100" ypos="0" zpos="50" name="barrier-1"
+xpos="10" ypos="0" zpos="0" name="barrier-1" type="downonly"
+xpos="10" ypos="0" zpos="100" name="barrier-1" type="downonly"
+```
 - Each Barrier MUST contain exactly 2 entries
 - Invalid lines will be skipped
 - Invalid barriers will be ignored, and generate warnings
@@ -145,11 +147,13 @@
 - All lines sharing the same `name` key will be used as a pair with order defined by file order.
 - Lines may contain the [Type](#path-types) key
 - Example path definition: 
-`xpos="100" ypos="0" zpos="0" name="path-1"`
-`xpos="100" ypos="0" zpos="10" name="path-1"`
-`xpos="100" ypos="0" zpos="30" name="path-1"`
-`xpos="200" ypos="0" zpos="50" name="path-2" type="mushroom"`
-`xpos="200" ypos="0" zpos="100" name="path-2" type="mushroom"`
+```
+xpos="100" ypos="0" zpos="0" name="path-1"
+xpos="100" ypos="0" zpos="10" name="path-1"
+xpos="100" ypos="0" zpos="30" name="path-1"
+xpos="200" ypos="0" zpos="50" name="path-2" type="mushroom"
+xpos="200" ypos="0" zpos="100" name="path-2" type="mushroom"
+```
 - Invalid lines will be skipped
 - Invalid paths will be ignored
 #### waypoints.txt format
