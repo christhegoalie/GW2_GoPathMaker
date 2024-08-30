@@ -34,7 +34,7 @@
 1. Add your maps directory. `XXXMarkerPack/maps`
 1. Add a map you intend to add markers for: `XXXMarkerPack/maps/JanthirSyntri`
 1. Create `mapinfo.txt` in your map directory containing the map id. EX: `id=1554` (Can be easily found using the "Marker Pack Assistant" module from blish)
-1. Create any number of `.poi` and `.trail` files containing marker location information. (any sub directory structure may be used)
+1. Create any number of [.poi](#poi-file-format) and [.trail](#trail-file-format) files containing marker location information. (any sub directory structure may be used)
 1. Generate your package zip file: `./gw2_markers_gen -n XXXMarkerPack`
 
 ## Appendix
@@ -45,7 +45,7 @@
 #### `map` directory
 - No Directory structure is required
 - The root or subdirectory MAY contain any number of [.poi](#poi-file-format) files
-- The root or subdirectory MAY contain any number of [.trail](#.trail-file-format) files
+- The root or subdirectory MAY contain any number of [.trail](#trail-file-format) files
 - MUST contain a `mapinfo.txt` file defining the mapid.
 - MAY contain a `barriers.txt` file for trail creation. (defines regions path generation is unable to cross)
 - MAY contain a `paths.txt` file for trail creation (defining a list of paths/shortcuts. Typically these are bouncing mushrooms or ways to bypass barriers)
@@ -70,11 +70,11 @@
 - This can be used to add any custom data required
 
 ### File Extensions
-#### cat file format
+#### .cat file format
 - Every line defines a key/value pair describing category attributes. (See `https://www.gw2taco.com/2016/01/how-to-create-your-own-marker-pack.html` for a list of valid attributes)
 - Key/Value MUST be separated by the `=` sign
 - All non Key/Value pair lines will be skipped
-#### poi file format
+#### .poi file format
 - Line 1 MUST reference a marker category present in your category directory. EX: `category=ShellshotMarkerPack.Janthir.GatherNodes.ChargedOre`
 - Every subsequent line references a single marker
 - Every marker line is defined as a list of Key/Value pairs
