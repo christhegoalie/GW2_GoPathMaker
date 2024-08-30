@@ -37,6 +37,38 @@
 1. Create any number of `.poi` and `.trail` files containing marker location information. (any sub directory structure may be used)
 1. Generate your package zip file: `./gw2_markers_gen -n XXXMarkerPack`
 
+## Appendix
+### Directory Structure
+#### `maps` directory
+- Location for storing map information
+- Every directory under the maps directory MUST definte a map [see description below]
+#### `map` directory
+- No Directory structure is required
+- The root or subdirectory MAY contain any number of [.poi`](#.poi-file-extension) files
+- The root or subdirectory MAY contain any number of [.trail](#.trail-file-extension) files
+- MUST contain a `mapinfo.txt` file defining the mapid.
+- MAY contain a `barriers.txt` file for trail creation. (defines regions path generation is unable to cross)
+- MAY contain a `paths.txt` file for trail creation (defining a list of paths/shortcuts. Typically these are bouncing mushrooms or ways to bypass barriers)
+- MAY contain a `waypoints.txt` file for trail creation (used to generate starting location)
+#### `categories` directory
+- Location for storing category definitions
+- Directory structure determines category name.
+- EX: `categories/Janthir/Chests/MajorCaches.cat` generates the Category: `Janthir.Chests.MajorCaches`
+- Display Names will be generated from directory names (spaces will be added When casing alternates)
+#### `assets` directory
+- No Directory structure is required
+- General location for storing assets (images/binary trail data)
+- No verification takes place
+- Compiled assets are placed in this directory [See compiled_assets for more information]
+#### `compiled_assets` directory
+- No Directory structure is required
+- Location for storing trail definition files that will be compiled to `.trl` files
+- Assets compiled from this directory will be stored in the `assets` directory
+- EX: `compiled_assets/mytrails/trail1.rtrl` will be compiled to `assets/mytrails/trail1.trl`
+#### User directories
+- All files/directories inside your marker pack root directory will be zipped into the output path file.
+- This can be used to add any custom data required
+
 ### .cat file format
 - Every line defines a key/value pair describing category attributes. (See `https://www.gw2taco.com/2016/01/how-to-create-your-own-marker-pack.html` for a list of valid attributes)
 - Key/Value MUST be separated by the `=` sign
@@ -71,3 +103,13 @@
 - Subsequent lines MUST contain X,Y,Z position information (as copied using the "Marker Pack Assistant" module from blish)
 - All Other Keys are ignored
 - Lines without position information are skipped
+### .atrl
+- Every line defines a key/value pair describing map information
+- Key/Value MUST be separated by the `=` sign
+- The file MUST contain the `map` key
+- the file MUST contain a `file` key
+- All Other Keys are ignored
+- Lines without position information are skipped
+- The `map` value MUST match the name of a directory in your `maps` folder
+- The `file` value MUST be a valid path relative to the map directory defined in the `map` field
+
