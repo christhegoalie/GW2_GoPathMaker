@@ -45,24 +45,7 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 			p[i+1] = poi
 		}
 		p.sort()
-		ct := 0
-		dist := p.Distance(true, true)
-		log.Printf("Begin Optimization: %d", mapid)
-		for {
-			opt1 := p.optimize(true)
-			opt2 := p.optimize(false)
-			newDist := p.Distance(true, true)
-			log.Printf("Optimized distance %.2f to %.2f", dist, newDist)
-			dist = newDist
-			if opt1 && opt2 {
-				break
-			}
-			ct++
-			if ct > 10000 {
-				return errors.New("maximum optimizations exceeded")
-			}
-		}
-		log.Printf("Optimization Complete: %d", mapid)
+		p.optimze(mapid)
 
 		if dist := p.Distance(true, true); dist < min {
 			minPath = p
@@ -80,7 +63,7 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 					panic("unexpected missing path")
 				}
 				for _, p := range takenPaths {
-					final = append(final, p.points...)
+					final = append(final, p._points...)
 				}
 			} else if i+1 < len(minPath) {
 				dist := minPath[i].Distance(minPath[i+1], false, false)
@@ -131,7 +114,7 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 	i := 0
 	for _, b := range glBarriers {
 		i++
-		b, err := PointsToTrlBytes(mapid, b.points)
+		b, err := PointsToTrlBytes(mapid, b._points)
 		if err == nil {
 			fileName := fmt.Sprintf("%s_barrier_%d%s", baseFileName, i, extension)
 			os.WriteFile(fileName, b, fs.ModePerm)
@@ -148,7 +131,7 @@ func (p path) Distance(allowWaypoints bool, bypassBarriers bool) float64 {
 	return out
 }
 
-func (p path) trySwap3p(i, j int) bool {
+func (p path) trySwap3p(i, j int, bypasBarriers bool) bool {
 
 	//Note: non-directed graph, so no need to compute parts of the path that don't change
 	first := i
@@ -159,16 +142,16 @@ func (p path) trySwap3p(i, j int) bool {
 	//Remove segments
 	for r := i - 1; r < j+1; r++ {
 		if r+1 < len(p) {
-			delta -= p[r].Distance(p[r+1], true, true)
+			delta -= p[r].Distance(p[r+1], true, bypasBarriers)
 		}
 	}
 
-	delta += p[i-1].Distance(p[j], true, true)
+	delta += p[i-1].Distance(p[j], true, bypasBarriers)
 	if j+1 < len(p) {
-		delta += p[first].Distance(p[j+1], true, true)
+		delta += p[first].Distance(p[j+1], true, bypasBarriers)
 	}
 	for r := j; r > i-1; r-- {
-		delta += p[r].Distance(p[r-1], false, true) //don't allow waypoints when following paths
+		delta += p[r].Distance(p[r-1], false, bypasBarriers) //don't allow waypoints when following paths
 	}
 
 	if delta < 0 {
@@ -179,7 +162,7 @@ func (p path) trySwap3p(i, j int) bool {
 	}
 	return false
 }
-func (p path) trySwap2p(i, j int) bool {
+func (p path) trySwap2p(i, j int, bypasBarriers bool) bool {
 	if len(p) < 2 || i >= len(p) || j >= len(p) {
 		return false
 	}
@@ -200,8 +183,8 @@ func (p path) trySwap2p(i, j int) bool {
 		newSeg[len(newSeg)-1] = oldSeg[1]
 	}
 
-	newDist := newSeg.Distance(true, true)
-	oldDist := oldSeg.Distance(true, true)
+	newDist := newSeg.Distance(true, bypasBarriers)
+	oldDist := oldSeg.Distance(true, bypasBarriers)
 	if newDist < oldDist {
 		p[i], p[j] = p[j], p[i]
 		return true
@@ -209,15 +192,45 @@ func (p path) trySwap2p(i, j int) bool {
 	return false
 }
 
+func (p path) optimze(mapId int) error {
+	ct := 0
+	dist := p.Distance(true, false)
+	log.Printf("Begin Optimization: %d", mapId)
+
+	bypassBarriers := false
+	firstPass := true
+	log.Println("First Pass")
+	for {
+		opt1 := p.optimizeAlg(true, bypassBarriers)
+		opt2 := p.optimizeAlg(false, bypassBarriers)
+		newDist := p.Distance(true, bypassBarriers)
+		log.Printf("Optimized distance %.2f to %.2f", dist, newDist)
+		dist = newDist
+		if opt1 && opt2 {
+			if firstPass {
+				log.Println("Second Pass")
+				firstPass = false
+				bypassBarriers = true
+			}
+			break
+		}
+		ct++
+		if ct > 10000 {
+			return errors.New("maximum optimizations exceeded")
+		}
+	}
+	log.Printf("Optimization Complete: %d", mapId)
+	return nil
+}
 func (p path) sort() {
 	tmp := make([]point, len(p)-1)
 	copy(tmp, p[1:])
 	index := 0
 	for len(tmp) > 0 {
 		minIndex := 0
-		minDist := p[index].Distance(tmp[0], true, true)
+		minDist := p[index].Distance(tmp[0], true, false)
 		for i := 1; i < len(tmp); i++ {
-			if dist := p[index].Distance(tmp[i], true, true); dist < minDist {
+			if dist := p[index].Distance(tmp[i], true, false); dist < minDist {
 				minDist = dist
 				minIndex = i
 			}
@@ -231,7 +244,7 @@ func (p path) sort() {
 }
 
 // returns true of no changes made
-func (p path) optimize(p3 bool) bool {
+func (p path) optimizeAlg(p3 bool, bypassBarriers bool) bool {
 	done := true
 	for i := 1; i < len(p)-1; i++ {
 		for j := i + 1; j < len(p); j++ {
@@ -239,11 +252,11 @@ func (p path) optimize(p3 bool) bool {
 				panic("unexpected")
 			}
 			if p3 {
-				if p.trySwap3p(i, j) {
+				if p.trySwap3p(i, j, bypassBarriers) {
 					done = false
 				}
 			} else {
-				if p.trySwap2p(i, j) {
+				if p.trySwap2p(i, j, bypassBarriers) {
 					done = false
 				}
 			}
@@ -295,32 +308,43 @@ func (src point) Distance(dst point, allowWaypoints bool, bypassBarriers bool) f
 func (t typedGroup) IsMushroom() bool {
 	return t.Type == GT_Mushroom
 }
+
+func (t *typedGroup) addPoint(pt point) {
+	t._distance = t._distance + t._points[len(t._points)-1].CalcDistance(pt)
+	t._points = append(t._points, pt)
+}
+func (t typedGroup) last() point {
+	return t._points[len(t._points)-1]
+}
+func (t typedGroup) first() point {
+	return t._points[0]
+}
+func (t typedGroup) distance() float64 {
+	if t.IsMushroom() {
+		return mushroomCost
+	}
+	return t._distance
+}
 func (src point) TakePath(path []typedGroup) (float64, point) {
 	var out float64
 	for _, p := range path {
-		if p.IsMushroom() {
-			out += mushroomCost
-			src = p.points.last()
-		} else {
-			for _, item := range p.points {
-				out += src.CalcDistance(item)
-				src = item
-			}
-		}
+		out += src.CalcDistance(p.first())
+		out += p.distance()
+		src = p.last()
 	}
 	return out, src
 }
 
 func (src point) barrier(dst point) bool {
 	for _, b := range glBarriers {
-		if len(b.points) != 2 {
+		if len(b._points) != 2 {
 			fmt.Println("Unsupported barrier")
 			return false
 		}
 		if b.Type == BT_DownOnly && dst.y < src.y {
 			continue
 		}
-		if doIntersect(src, dst, b.points[0], b.points[1]) {
+		if doIntersect(src, dst, b.first(), b.last()) {
 			return true
 		}
 	}
@@ -355,35 +379,39 @@ func availablePaths(usedList []typedGroup) []typedGroup {
 }
 
 func (t typedGroup) Reverse() typedGroup {
-	rev := make([]point, len(t.points))
-	copy(rev, t.points)
+	rev := make([]point, len(t._points))
+	copy(rev, t._points)
 	slices.Reverse(rev)
 	return typedGroup{
 		name:        t.name,
 		reverseName: t.reverseName,
 		Type:        t.Type,
-		points:      rev,
+		_points:     rev,
+		_distance:   t._distance,
 	}
 }
 
 func (src point) pathTo(dst point, usedPaths []typedGroup) ([]typedGroup, bool) {
+	if len(usedPaths) > 3 {
+		return []typedGroup{}, false
+	}
 	choices := []typedGroup{}
 	var addChoice = false
 	start := src
 	if len(usedPaths) > 0 {
-		start = usedPaths[len(usedPaths)-1].points.last()
+		start = usedPaths[len(usedPaths)-1].last()
 	}
 	possiblePaths := [][]typedGroup{}
 	for _, path := range availablePaths(usedPaths) {
-		if !start.barrier(path.points.first()) {
+		if !start.barrier(path.first()) {
 			addChoice = true
-			if !path.points.last().barrier(dst) {
+			if !path.last().barrier(dst) {
 				possiblePaths = append(possiblePaths, append(usedPaths, path))
 			}
 		}
-		if !path.IsMushroom() && !start.barrier(path.points.last()) {
+		if !path.IsMushroom() && !start.barrier(path.last()) {
 			addChoice = true
-			if !path.points.first().barrier(dst) {
+			if !path.first().barrier(dst) {
 				possiblePaths = append(possiblePaths, append(usedPaths, path.Reverse()))
 			}
 		}

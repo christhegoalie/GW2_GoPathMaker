@@ -76,15 +76,17 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 			continue
 		}
 		pt := point{x: x, y: y, z: z}
-
 		if name, ok := vals["name"]; ok {
 			if v, ok := out[name]; ok {
-				v.points = append(v.points, pt)
+				v.addPoint(pt)
 				out[name] = v
 			} else {
 				v := typedGroup{
-					points: []point{pt},
-					Type:   Type_Unknown,
+					name:        name,
+					reverseName: "Reversed " + name,
+					_points:     []point{pt},
+					Type:        Type_Unknown,
+					_distance:   0,
 				}
 				if typeString, ok := vals["type"]; ok {
 					switch strings.ToLower(typeString) {

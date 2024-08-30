@@ -24,8 +24,9 @@ const (
 type typedGroup struct {
 	name        string
 	reverseName string
-	points      path
+	_points     []point
 	Type        objectType
+	_distance   float64
 }
 type point struct {
 	x, y, z float64
