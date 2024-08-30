@@ -45,7 +45,7 @@
 #### `map` directory
 - No Directory structure is required
 - The root or subdirectory MAY contain any number of [.poi](#poi-file-format) files
-- The root or subdirectory MAY contain any number of [.trail](#trail-file-format) files
+- The root or subdirectory MAY contain any number of [.trail](#.trail-file-format) files
 - MUST contain a `mapinfo.txt` file defining the mapid.
 - MAY contain a `barriers.txt` file for trail creation. (defines regions path generation is unable to cross)
 - MAY contain a `paths.txt` file for trail creation (defining a list of paths/shortcuts. Typically these are bouncing mushrooms or ways to bypass barriers)
