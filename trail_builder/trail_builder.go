@@ -22,11 +22,12 @@ const (
 )
 
 type typedGroup struct {
-	name        string
-	reverseName string
-	_points     []point
-	Type        objectType
-	_distance   float64
+	name         string
+	reverseName  string
+	_points      []point
+	Type         objectType
+	_distance    float64
+	_revDistance float64
 }
 type point struct {
 	x, y, z float64

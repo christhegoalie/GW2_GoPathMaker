@@ -4,12 +4,29 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"math"
 	"os"
 	"slices"
 )
 
+type graphPath struct {
+	node *graphNode
+	next *graphPath
+}
+type edge struct {
+	shortcuts []typedGroup //optional non-direct path to reach node
+	cost      float64
+	dest      *graphNode
+}
+type graphNode struct {
+	location point
+	required bool
+	edges    []edge
+}
+type graph struct {
+	nodes     []*graphNode
+	waypoints []*graphNode
+}
 type path []point
 
 var glBarriers map[string]typedGroup
@@ -24,7 +41,6 @@ const enableWaypointing = false
 const mushroomCost = 10
 
 func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[string]typedGroup, paths map[string]typedGroup, baseFileName string, extension string) error {
-	finals := [][]point{}
 	if glBarriers != nil || glPaths != nil {
 		panic("threading unsupported")
 	}
@@ -36,79 +52,26 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 		glPaths = nil
 	}()
 
-	var minPath path
-	var min float64 = math.MaxFloat64
-	for _, w := range waypoints {
-		p := make(path, 1+len(pois))
-		p[0] = w
-		for i, poi := range pois {
-			p[i+1] = poi
-		}
-		p.sort()
-		p.optimze(mapid)
+	g := path(pois).toGraph()
+	g.addWaypoints(waypoints)
+	pathList := g.getPaths()
 
-		if dist := p.Distance(true, true); dist < min {
-			minPath = p
-			min = dist
+	for _, p := range pathList {
+		for p.optimize() {
 		}
 	}
 
-	final := make([]point, 0)
-	for i := 0; i < len(minPath); i++ {
-		final = append(final, minPath[i])
-		if i+1 < len(minPath) {
-			if minPath[i].barrier(minPath[i+1]) {
-				takenPaths, ok := minPath[i].findPath(minPath[i+1])
-				if !ok {
-					panic("unexpected missing path")
-				}
-				for _, p := range takenPaths {
-					final = append(final, p._points...)
-				}
-			} else if i+1 < len(minPath) {
-				dist := minPath[i].Distance(minPath[i+1], false, false)
+	final, _ := pathList.shortest()
+	points := final.toPath()
 
-				if enableWaypointing {
-					var waypoint *point = nil
-					for i, w := range waypoints {
-						wpDistance := waypointCost + w.Distance(minPath[i+1], false, true)
-						if wpDistance < dist {
-							waypoint = &w
-							dist = wpDistance
-						}
-					}
-					if waypoint != nil {
-						finals = append(finals, final)
-						final = []point{}
-					}
-				}
-			}
-		}
+	b, err := PointsToTrlBytes(mapid, points)
+	if err != nil {
+		return err
 	}
-	finals = append(finals, final)
-
-	if len(finals) == 1 {
-		b, err := PointsToTrlBytes(mapid, finals[0])
-		if err != nil {
-			return err
-		}
-		fileName := fmt.Sprintf("%s%s", baseFileName, extension)
-		err = os.WriteFile(fileName, b, fs.ModePerm)
-		if err != nil {
-			return err
-		}
-	} else {
-		for i, ls := range finals {
-			b, err := PointsToTrlBytes(mapid, ls)
-			if err != nil {
-				return err
-			}
-			fileName := fmt.Sprintf("%s_%d%s", baseFileName, i+1, extension)
-			err = os.WriteFile(fileName, b, fs.ModePerm)
-			if err != nil {
-				return err
-			}
-		}
+	fileName := fmt.Sprintf("%s%s", baseFileName, extension)
+	err = os.WriteFile(fileName, b, fs.ModePerm)
+	if err != nil {
+		return err
 	}
 
 	i := 0
@@ -121,6 +84,10 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 		}
 	}
 	return nil
+}
+func (l *graphPath) optimize() bool {
+	return false
+
 }
 
 func (p path) Distance(allowWaypoints bool, bypassBarriers bool) float64 {
@@ -192,56 +159,217 @@ func (p path) trySwap2p(i, j int, bypasBarriers bool) bool {
 	return false
 }
 
-func (p path) optimze(mapId int) error {
-	ct := 0
-	dist := p.Distance(true, false)
-	log.Printf("Begin Optimization: %d", mapId)
-
-	bypassBarriers := false
-	firstPass := true
-	log.Println("First Pass")
-	for {
-		opt1 := p.optimizeAlg(true, bypassBarriers)
-		opt2 := p.optimizeAlg(false, bypassBarriers)
-		newDist := p.Distance(true, bypassBarriers)
-		log.Printf("Optimized distance %.2f to %.2f", dist, newDist)
-		dist = newDist
-		if opt1 && opt2 {
-			if firstPass {
-				log.Println("Second Pass")
-				firstPass = false
-				bypassBarriers = true
-			} else {
-				break
-			}
-		}
-		ct++
-		if ct > 10000 {
-			return errors.New("maximum optimizations exceeded")
-		}
+func findPathDistance(start point, path []typedGroup, dest point) float64 {
+	if len(path) == 0 {
+		return BarrierValue //indicates no paths
 	}
-	log.Printf("Optimization Complete: %d", mapId)
-	return nil
+	pathLen := start.CalcDistance(path[0].first()) + path[len(path)-1].last().CalcDistance(dest)
+	for _, p := range path {
+		pathLen += p.distance()
+	}
+	return pathLen
 }
-func (p path) sort() {
-	tmp := make([]point, len(p)-1)
-	copy(tmp, p[1:])
-	index := 0
-	for len(tmp) > 0 {
-		minIndex := 0
-		minDist := p[index].Distance(tmp[0], true, false)
-		for i := 1; i < len(tmp); i++ {
-			if dist := p[index].Distance(tmp[i], true, false); dist < minDist {
-				minDist = dist
-				minIndex = i
+func (node1 *graphNode) connect(node2 *graphNode) {
+	const MAX_PATH_LENGTH = 10000
+
+	// find any possible paths to the node
+	toPath, _ := node1.location.findPath(node2.location)
+	fromPath, _ := node2.location.findPath(node1.location)
+	toDistance := findPathDistance(node1.location, toPath, node2.location)
+	fromDistance := findPathDistance(node2.location, fromPath, node1.location)
+	toDirectDistance := node1.location.Distance(node2.location, false, false)
+	fromDirectDistance := node2.location.Distance(node1.location, false, false)
+
+	if toDirectDistance < toDistance {
+		if toDirectDistance < MAX_PATH_LENGTH {
+			node1.edges = append(node1.edges,
+				edge{
+					dest: node2,
+					cost: toDirectDistance,
+				})
+		}
+	} else {
+		if toDistance < MAX_PATH_LENGTH {
+			node1.edges = append(node1.edges,
+				edge{
+					dest:      node2,
+					cost:      toDistance,
+					shortcuts: toPath,
+				})
+		}
+	}
+
+	//Node 2 to node 1
+	if fromDirectDistance < fromDistance {
+		if fromDirectDistance < MAX_PATH_LENGTH {
+			node2.edges = append(node2.edges,
+				edge{
+					dest: node1,
+					cost: fromDirectDistance,
+				})
+		}
+	} else {
+		if fromDistance < MAX_PATH_LENGTH {
+			node2.edges = append(node2.edges,
+				edge{
+					dest:      node1,
+					cost:      fromDistance,
+					shortcuts: fromPath,
+				})
+		}
+	}
+}
+func (g *graph) add(pt point, required bool) *graphNode {
+	node := graphNode{
+		location: pt,
+		edges:    make([]edge, 0),
+		required: required,
+	}
+	for i, graphNode := range g.nodes {
+		graphNode.connect(&node)
+		g.nodes[i] = graphNode
+	}
+	g.nodes = append(g.nodes, &node)
+	return &node
+}
+
+func (g graph) requiredNodes() []*graphNode {
+	out := []*graphNode{}
+	for _, n := range g.nodes {
+		if n.required {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+func contains(ls []*graphNode, node *graphNode) bool {
+	for _, i := range ls {
+		if node == i {
+			return true
+		}
+	}
+	return false
+}
+func remove(ls []*graphNode, node *graphNode) []*graphNode {
+	for i, _node := range ls {
+		if node == _node {
+			ls[i] = ls[len(ls)-1]
+			ls = ls[:len(ls)-1]
+			return ls
+		}
+	}
+	panic("remove item doesn't exist")
+}
+func (n *graphNode) closest(required []*graphNode) *graphNode {
+	var currentCost float64
+	var out *graphNode
+	for _, edge := range n.edges {
+		if !contains(required, edge.dest) {
+			continue
+		} else if out == nil {
+			out = edge.dest
+			currentCost = edge.cost
+		} else {
+			if edge.cost < currentCost {
+				currentCost = edge.cost
+				out = edge.dest
 			}
 		}
-
-		p[index+1] = tmp[minIndex]
-		index++
-		tmp[minIndex] = tmp[len(tmp)-1]
-		tmp = tmp[:len(tmp)-1]
 	}
+
+	//Catch for valid edges to finish the path..let the otimizer fix things
+	if out == nil {
+		out = required[0]
+	}
+	return out
+}
+
+type graphPathList []*graphPath
+
+func (p *graphNode) findEdge(dst *graphNode) (edge, error) {
+	for _, edge := range p.edges {
+		if edge.dest == dst {
+			return edge, nil
+		}
+	}
+	return edge{}, errors.New("expected edge")
+}
+func (p *graphPath) toPath() path {
+	out := path{p.node.location}
+	for p.next != nil {
+		edge, err := p.node.findEdge(p.next.node)
+		if err != nil {
+			return out
+		}
+		for _, st := range edge.shortcuts {
+			out = append(out, st._points...)
+		}
+		out = append(out, p.next.node.location)
+		p = p.next
+	}
+	return out
+}
+func (p *graphPath) distanceTo(n *graphNode) float64 {
+	for _, edge := range p.node.edges {
+		if edge.dest == n {
+			return edge.cost
+		}
+	}
+
+	return BarrierValue
+}
+func (p *graphPath) EndDistance() float64 {
+	var out float64
+	for {
+		if p == nil || p.next == nil {
+			return out
+		}
+		out += p.distanceTo(p.next.node)
+		p = p.next
+	}
+}
+func (l graphPathList) shortest() (*graphPath, float64) {
+	var out *graphPath
+	var min float64
+	for _, path := range l {
+		dist := path.EndDistance()
+		if out == nil || dist < min {
+			out = path
+			min = dist
+		}
+	}
+	return out, min
+}
+
+func (g *graph) getPaths() graphPathList {
+	out := make(graphPathList, len(g.waypoints))
+	for i, w := range g.waypoints {
+		current := &graphPath{node: w}
+		out[i] = current
+		required := g.requiredNodes()
+		for len(required) > 0 {
+			node := current.node.closest(required)
+			required = remove(required, node)
+			newNode := &graphPath{node: node}
+			current.next = newNode
+			current = newNode
+		}
+	}
+	return out
+}
+func (g *graph) addWaypoints(pts []point) {
+	for _, p := range pts {
+		wp := g.add(p, false)
+		g.waypoints = append(g.waypoints, wp)
+	}
+}
+func (p path) toGraph() graph {
+	g := graph{}
+	for _, node := range p {
+		g.add(node, true)
+	}
+	return g
 }
 
 // returns true of no changes made
@@ -312,6 +440,7 @@ func (t typedGroup) IsMushroom() bool {
 
 func (t *typedGroup) addPoint(pt point) {
 	t._distance = t._distance + t._points[len(t._points)-1].CalcDistance(pt)
+	t._revDistance = t._revDistance + pt.CalcDistance(t._points[len(t._points)-1])
 	t._points = append(t._points, pt)
 }
 func (t typedGroup) last() point {
@@ -383,12 +512,17 @@ func (t typedGroup) Reverse() typedGroup {
 	rev := make([]point, len(t._points))
 	copy(rev, t._points)
 	slices.Reverse(rev)
+
+	dist := t._distance
+	revDist := t._revDistance
+
 	return typedGroup{
-		name:        t.name,
-		reverseName: t.reverseName,
-		Type:        t.Type,
-		_points:     rev,
-		_distance:   t._distance,
+		name:         t.name,
+		reverseName:  t.reverseName,
+		Type:         t.Type,
+		_points:      rev,
+		_distance:    revDist,
+		_revDistance: dist,
 	}
 }
 
