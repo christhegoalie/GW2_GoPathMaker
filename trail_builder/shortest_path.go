@@ -4,9 +4,17 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"math"
 	"os"
 	"slices"
+)
+
+type algorithm int
+
+const (
+	ALG_2p = iota
+	ALG_3p
 )
 
 type graphPath struct {
@@ -56,8 +64,14 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 	g.addWaypoints(waypoints)
 	pathList := g.getPaths()
 
-	for _, p := range pathList {
+	log.Printf("Optimizing Map: %d", mapid)
+	for i, p := range pathList {
+		log.Printf("Optimizing path option %d", i+1)
+		old := p.EndDistance()
 		for p.optimize() {
+			cur := p.EndDistance()
+			log.Printf("Optimized from %.2f to %.2f", old, cur)
+			old = cur
 		}
 	}
 
@@ -85,9 +99,208 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 	}
 	return nil
 }
-func (l *graphPath) optimize() bool {
-	return false
 
+func newPath(args ...any) *graphPath {
+	root := graphPath{}
+	tmp := &root
+	for _, i := range args {
+		switch v := i.(type) {
+		case *graphPath:
+			if v != nil {
+				tmp.next = &graphPath{node: v.node}
+				tmp = tmp.next
+			}
+		case *graphPathTraversal:
+			if v == nil {
+				return nil
+			}
+			for a := v.path; a != nil; a = a.next {
+				tmp.next = &graphPath{node: a.node}
+				tmp = tmp.next
+			}
+		default:
+			panic("invalid type")
+		}
+	}
+	if root.next == nil {
+		panic("no path")
+	}
+	return root.next
+}
+
+type graphPathTraversal struct {
+	path   *graphPath
+	length int
+}
+
+func fullPath(start *graphPath, end *graphPath) graphPathTraversal {
+	out := graphPath{node: start.node}
+	var tmp *graphPath = &out
+	length := 1
+	if start.next != nil {
+		for a := start.next; a != nil; a = a.next {
+			if a == end {
+				break
+			}
+			tmp.next = &graphPath{node: a.node}
+			tmp = tmp.next
+			length++
+		}
+	}
+	return graphPathTraversal{
+		path:   &out,
+		length: length,
+	}
+}
+
+func edgeExists(node1 *graphNode, node2 *graphNode) bool {
+	for _, e := range node1.edges {
+		if node2 == e.dest {
+			return true
+		}
+	}
+	return false
+}
+func (path graphPathTraversal) reverse() graphPathTraversal {
+	var out *graphPath
+	var tmp *graphPath
+	ls := []*graphNode{}
+	for a := path.path; a != nil; a = a.next {
+		ls = append(ls, a.node)
+	}
+	for i := len(ls) - 1; i >= 0; i-- {
+		if i != 0 && !edgeExists(ls[i], ls[i-1]) {
+			return graphPathTraversal{}
+		}
+		if out == nil {
+			out = &graphPath{node: ls[i]}
+			tmp = out
+		} else {
+			tmp.next = &graphPath{node: ls[i]}
+			tmp = tmp.next
+		}
+	}
+	return graphPathTraversal{
+		path:   out,
+		length: path.length,
+	}
+}
+func (path *graphPath) trySwapNext(target *graphPath, alg algorithm) bool {
+	if path == nil || path.next == nil || target == nil {
+		return false
+	}
+
+	start := path
+	node1 := path.next
+	middle := path.next.next
+	node2 := target
+	end := target.next
+
+	var p1, p2 *graphPath
+	if alg == ALG_2p {
+		if middle == target {
+			p1 = newPath(start, node1, node2, end)
+			p2 = newPath(start, node2, node1, end)
+		} else {
+			fp := fullPath(middle, node2)
+			p1 = newPath(start, node1, &fp, node2, end)
+			p2 = newPath(start, node2, &fp, node1, end)
+		}
+	} else if alg == ALG_3p {
+		if middle == target {
+			p1 = newPath(start, node1, node2, end)
+			p2 = newPath(start, node2, node1, end)
+		} else {
+			fp := fullPath(middle, node2)
+			rev := fp.reverse()
+			if rev.length == 0 {
+				return false
+			}
+			p1 = newPath(start, node1, &fp, node2, end)
+			p2 = newPath(start, node2, &rev, node1, end)
+			if p2 == nil || p1 == nil {
+				return false
+			}
+		}
+	}
+
+	if p1Dist, p2Dist := p1.EndDistance(), p2.EndDistance(); p2Dist < p1Dist {
+		if end != nil && end.next != nil {
+			tmp := p2
+			for tmp.next != nil {
+				tmp = tmp.next
+			}
+			tmp.next = end.next
+		}
+		path.next = p2.next
+		return true
+	}
+	return false
+}
+func (p *graphPath) hasDuplicates() bool {
+	check := p
+	for check != nil {
+		comp := check.next
+		for comp != nil {
+			if comp.node.location == check.node.location {
+				return true
+			}
+			comp = comp.next
+		}
+		check = check.next
+	}
+	return false
+}
+func (path *graphPath) length() int {
+	len := 0
+	for path != nil {
+		len++
+		path = path.next
+	}
+	return len
+}
+func (path *graphPath) optimize() bool {
+	if path == nil || path.next == nil {
+		return false
+	}
+
+	src := path
+	for {
+		target := src.next.next
+		for {
+			if target == nil {
+				break
+			}
+			if found := src.trySwapNext(target, ALG_3p); found {
+				return found
+			}
+			target = target.next
+		}
+		src = src.next
+		if src.next.next == nil {
+			break
+		}
+	}
+
+	src = path
+	for {
+		target := src.next.next
+		for {
+			if target == nil {
+				break
+			}
+			if found := src.trySwapNext(target, ALG_2p); found {
+				return true
+			}
+			target = target.next
+		}
+		src = src.next
+		if src.next.next == nil {
+			break
+		}
+	}
+
+	return false
 }
 
 func (p path) Distance(allowWaypoints bool, bypassBarriers bool) float64 {
