@@ -48,3 +48,19 @@ func FilesByExtension(root string, extensions ...string) []string {
 	}
 	return fileList
 }
+
+func FilesWithPrefixSuffix(root string, prefix string, suffix string) []string {
+	items, _ := os.ReadDir(root)
+	fileList := []string{}
+	for _, item := range items {
+		fullPath := fmt.Sprintf("%s/%s", root, item.Name())
+		if item.IsDir() {
+			fileList = append(fileList, FilesByExtension(fullPath, prefix, suffix)...)
+		}
+		if strings.HasPrefix(item.Name(), prefix) && strings.HasSuffix(item.Name(), suffix) {
+			fileList = append(fileList, fullPath)
+		}
+	}
+	return fileList
+
+}
