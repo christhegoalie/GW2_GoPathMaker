@@ -21,6 +21,10 @@ func parseTrail(category string, line string) (Trail, []string, error) {
 			warns = append(warns, warn)
 		}
 	}
+	if cat, ok := m["category"]; ok {
+		category = trim(cat)
+		delete(m, "category")
+	}
 
 	return Trail{
 		CategoryReference: category,
@@ -40,6 +44,10 @@ func parsePoi(category string, line string) (POI, []string, error) {
 	delete(m, "xpos")
 	delete(m, "ypos")
 	delete(m, "zpos")
+	if cat, ok := m["category"]; ok {
+		category = trim(cat)
+		delete(m, "category")
+	}
 
 	return POI{
 		CategoryReference: category,
