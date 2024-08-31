@@ -7,6 +7,7 @@ import (
 	"gw2_markers_gen/maps"
 	"io/fs"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -107,6 +108,10 @@ func compileAutoPaths(srcPath string) error {
 		waypoints := readPoints(waypointsFile)
 		paths := readTypedGroup(pathsFile)
 		pois := readPoints(poiFile)
+		if err := checkForDuplicates(pois); err != nil {
+			log.Printf("Path generation failed, error: %s", err.Error())
+			continue
+		}
 
 		if checkCompileTime {
 			lastCompile := dstFileInfo.ModTime()
@@ -150,4 +155,25 @@ func fileExists(fname string) bool {
 		return false
 	}
 	return true
+}
+
+func distance(p1, p2 point) float64 {
+	d1, d2, d3 := p2.x-p1.x, p2.y-p1.y, p2.z-p1.z
+	return math.Sqrt(d1*d1 + d2*d2 + d3*d3)
+}
+
+func (src point) same(point point) bool {
+	return distance(src, point) < 5
+}
+func checkForDuplicates(pts []point) error {
+	var err error
+	for i := 0; i < len(pts); i++ {
+		for j := i + 1; j < len(pts); j++ {
+			if pts[i].same(pts[j]) {
+				err = fmt.Errorf("duplicate point i:(%+v), j:(%+v)", pts[i], pts[j])
+				log.Println(err.Error())
+			}
+		}
+	}
+	return err
 }
