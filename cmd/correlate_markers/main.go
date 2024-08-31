@@ -141,7 +141,7 @@ func getPOICorrelations(pathName string) Correlations {
 }
 func findEntries(pathName string, category string) []pointList {
 	entries := []pointList{}
-	files := files.FilesWithPrefixSuffix(pathName, category+"_", ".txt")
+	files := files.FilesByExtension(fmt.Sprintf("%s/%s", pathName, category), category, ".txt")
 	for _, f := range files {
 		entries = append(entries, readPoints(f))
 	}
