@@ -109,7 +109,7 @@ func compileAutoPaths(srcPath string) error {
 		paths := readTypedGroup(pathsFile)
 		pois := readPoints(poiFile)
 		if err := checkForDuplicates(pois); err != nil {
-			log.Printf("Path generation failed, error: %s", err.Error())
+			log.Printf("Path generation failed [%s], error: %s", mapName, err.Error())
 			continue
 		}
 
@@ -170,7 +170,7 @@ func checkForDuplicates(pts []point) error {
 	for i := 0; i < len(pts); i++ {
 		for j := i + 1; j < len(pts); j++ {
 			if pts[i].same(pts[j]) {
-				err = fmt.Errorf("duplicate point i:(%+v), j:(%+v)", pts[i], pts[j])
+				err = fmt.Errorf("duplicate point i:%d, (%+v), j:%d, (%+v)", i, pts[i], j, pts[j])
 				log.Println(err.Error())
 			}
 		}
