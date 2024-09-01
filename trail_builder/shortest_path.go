@@ -14,7 +14,7 @@ type algorithm int
 
 const (
 	ALG_2p = iota
-	ALG_3p
+	ALG_4p
 )
 
 type graphPath struct {
@@ -198,15 +198,14 @@ func (path *graphPath) trySwapNext(target *graphPath, alg algorithm) bool {
 
 	var p1, p2 *graphPath
 	if alg == ALG_2p {
-		if middle == target {
-			p1 = newPath(start, node1, node2, end)
-			p2 = newPath(start, node2, node1, end)
+		if middle != target {
 		} else {
 			fp := fullPath(middle, node2)
+			rev := fp.reverse()
 			p1 = newPath(start, node1, &fp, node2, end)
-			p2 = newPath(start, node2, &fp, node1, end)
+			p2 = newPath(start, node1, &rev, node2, end)
 		}
-	} else if alg == ALG_3p {
+	} else if alg == ALG_4p {
 		if middle == target {
 			p1 = newPath(start, node1, node2, end)
 			p2 = newPath(start, node2, node1, end)
@@ -271,7 +270,7 @@ func (path *graphPath) optimize() bool {
 			if target == nil {
 				break
 			}
-			if found := src.trySwapNext(target, ALG_3p); found {
+			if found := src.trySwapNext(target, ALG_4p); found {
 				return found
 			}
 			target = target.next
