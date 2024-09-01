@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"slices"
+	"sync"
 )
 
 type algorithm int
@@ -64,16 +65,21 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 	g.addWaypoints(waypoints)
 	pathList := g.getPaths()
 
+	wg := sync.WaitGroup{}
 	log.Printf("Optimizing Map: %d", mapid)
-	for i, p := range pathList {
-		log.Printf("Optimizing path option %d", i+1)
-		old := p.EndDistance()
-		for p.optimize() {
-			cur := p.EndDistance()
-			log.Printf("Optimized from %.2f to %.2f", old, cur)
-			old = cur
-		}
+	for i := range pathList {
+		index := i
+		p := pathList[i]
+		wg.Add(1)
+		go func() {
+			log.Printf("[%d] Starting distance: %.2f", index+1, p.EndDistance())
+			defer wg.Add(-1)
+			for p.optimize() {
+			}
+			log.Printf("[%d] Final map distance: %.2f", index+1, p.EndDistance())
+		}()
 	}
+	wg.Wait()
 
 	final, _ := pathList.shortest()
 	points := final.toPath()
@@ -680,7 +686,7 @@ func (src point) TakePath(path []typedGroup) (float64, point) {
 func (src point) barrier(dst point) bool {
 	for _, b := range glBarriers {
 		if len(b._points) != 2 {
-			fmt.Println("Unsupported barrier")
+			log.Println("Unsupported barrier")
 			return false
 		}
 		if b.Type == BT_DownOnly && dst.y < src.y {

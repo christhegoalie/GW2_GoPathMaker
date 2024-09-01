@@ -36,6 +36,7 @@ type Summary struct {
 	MinReferences     int
 	MaxReferences     int
 	AverageReferences float64
+	ExpectedPoints    int
 }
 type EntryPoints []EntryPoint
 
@@ -85,25 +86,25 @@ func main() {
 		var min, max, ct int = math.MaxInt, 0, 0
 		var avg float64
 		for _, e := range list {
-			len := len(e.PossiblePois)
-			if len < min {
-				min = len
+			poiCount := len(e.PossiblePois)
+			if poiCount < min {
+				min = poiCount
 			}
-			if len > max {
-				max = len
+			if poiCount > max {
+				max = poiCount
 			}
-			avg += float64(len)
+			avg += float64(poiCount)
 			ct++
 		}
 		if ct > 0 {
 			avg = avg / float64(ct)
 		}
-		writeResults(srcDirectory, c.category, Summary{MinReferences: min, MaxReferences: max, AverageReferences: avg, Data: list})
+		writeResults(srcDirectory, c.category, Summary{ExpectedPoints: len(list), MinReferences: min, MaxReferences: max, AverageReferences: avg, Data: list})
 	}
 }
 
 func writeResults(path string, category string, summary Summary) {
-	log.Printf("%s Summary. Min: %d, Max: %d, Avg: %.1f", category, summary.MinReferences, summary.MaxReferences, summary.AverageReferences)
+	log.Printf("%s Summary. Points: %d, Min: %d, Max: %d, Avg: %.1f", category, summary.ExpectedPoints, summary.MinReferences, summary.MaxReferences, summary.AverageReferences)
 	b, _ := json.MarshalIndent(summary, "", "\t")
 	os.WriteFile(fmt.Sprintf("%s/%s.txt", path, category), b, os.ModePerm)
 }

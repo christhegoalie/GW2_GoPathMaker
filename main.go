@@ -69,7 +69,7 @@ func main() {
 func makeZip(path string, dstfile string) error {
 	outFile, err := os.Create(dstfile)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	defer outFile.Close()
 
