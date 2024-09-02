@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"gw2_markers_gen/categories"
+	"gw2_markers_gen/files"
 	"gw2_markers_gen/maps"
 	trailbuilder "gw2_markers_gen/trail_builder"
 	"io/fs"
@@ -56,6 +57,7 @@ func main() {
 	}
 
 	CopyAssets(fmt.Sprintf("%s/assets", srcDirectory), fmt.Sprintf("%s/assets", buildFolder))
+	files.Copy(fmt.Sprintf("%s/pack.lua", srcDirectory), fmt.Sprintf("%s/pack.lua", buildFolder))
 	categories.Save(packageCatagories, buildFolder)
 	maps.Save(packageMaps, buildFolder)
 	err = makeZip(buildFolder, outputZipPath)
