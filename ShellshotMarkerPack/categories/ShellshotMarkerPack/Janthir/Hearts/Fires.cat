@@ -1,0 +1,8 @@
+iconsize="0.3" 
+behavior="6" 
+alpha="1.0" 
+fadenear="100" 
+fadefar="800" 
+heightoffset="1" 
+resetlength="60" 
+iconfile="assets\icons\hearts\flame.png"

@@ -163,7 +163,7 @@ func distance(p1, p2 point) float64 {
 }
 
 func (src point) same(point point) bool {
-	return distance(src, point) < 5
+	return distance(src, point) < 4
 }
 func checkForDuplicates(pts []point) error {
 	var err error
