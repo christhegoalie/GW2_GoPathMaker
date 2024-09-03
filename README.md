@@ -164,6 +164,7 @@ xpos="200" ypos="0" zpos="100" name="path-2" type="mushroom"
 - All other keys will be ignored
 
 ### Path Types
-- `mushroom` defines a bouncing musroom path from begining to landing location
+- `mushroom` defines a one-way bouncing musroom path from begining to landing location
+- `oneway` defines a path that can only be taken in 1 direction. (typically if it requires gliding/falling)
 ### Barrier Types
 - `downonly` defines a barrier you can decend from, but not climb. (used for steep cliffs)

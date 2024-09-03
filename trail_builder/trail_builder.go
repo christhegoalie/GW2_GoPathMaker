@@ -19,6 +19,7 @@ const (
 	BT_DownOnly
 
 	GT_Mushroom
+	GT_ONEWAY
 )
 
 type typedGroup struct {

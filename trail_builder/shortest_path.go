@@ -652,6 +652,9 @@ func (src point) Distance(dst point, allowWaypoints bool, bypassBarriers bool) f
 	return pathDistance
 }
 
+func (t typedGroup) IsOneway() bool {
+	return t.Type == GT_ONEWAY || t.IsMushroom()
+}
 func (t typedGroup) IsMushroom() bool {
 	return t.Type == GT_Mushroom
 }
@@ -762,7 +765,7 @@ func (src point) pathTo(dst point, usedPaths []typedGroup) ([]typedGroup, bool) 
 				possiblePaths = append(possiblePaths, append(usedPaths, path))
 			}
 		}
-		if !path.IsMushroom() && !start.barrier(path.last()) {
+		if !path.IsOneway() && !start.barrier(path.last()) {
 			addChoice = true
 			if !path.first().barrier(dst) {
 				possiblePaths = append(possiblePaths, append(usedPaths, path.Reverse()))

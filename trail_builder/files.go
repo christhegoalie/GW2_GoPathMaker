@@ -74,6 +74,8 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 						v.Type = BT_Wall
 					case "mushroom":
 						v.Type = GT_Mushroom
+					case "oneway":
+						v.Type = GT_ONEWAY
 					}
 				}
 				out[name] = v
