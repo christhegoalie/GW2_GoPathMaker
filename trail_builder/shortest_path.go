@@ -19,8 +19,9 @@ const (
 )
 
 type graphPath struct {
-	node *graphNode
-	next *graphPath
+	bindEnd bool
+	node    *graphNode
+	next    *graphPath
 }
 type edge struct {
 	shortcuts []typedGroup //optional non-direct path to reach node
@@ -28,15 +29,16 @@ type edge struct {
 	dest      *graphNode
 }
 type graphNode struct {
-	location point
+	location Point
 	required bool
 	edges    []edge
 }
 type graph struct {
-	nodes     []*graphNode
-	waypoints []*graphNode
+	useEndpoint bool
+	nodes       []*graphNode
+	waypoints   []*graphNode
 }
-type path []point
+type path []Point
 
 var glBarriers map[string]typedGroup
 var glPaths map[string]typedGroup
@@ -49,7 +51,7 @@ const waypointCost = 1000
 const enableWaypointing = false
 const mushroomCost = 10
 
-func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[string]typedGroup, paths map[string]typedGroup, baseFileName string, extension string) error {
+func SaveShortestTrail(mapid int, waypoints []Point, pois []Point, barriers map[string]typedGroup, paths map[string]typedGroup, baseFileName string, extension string) error {
 	if glBarriers != nil || glPaths != nil {
 		panic("threading unsupported")
 	}
@@ -74,7 +76,7 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 		go func() {
 			log.Printf("[%d] Starting distance: %.2f", index+1, p.EndDistance())
 			defer wg.Add(-1)
-			for p.optimize() {
+			for p.optimize(false) {
 			}
 			log.Printf("[%d] Final map distance: %.2f", index+1, p.EndDistance())
 		}()
@@ -88,7 +90,9 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 	if err != nil {
 		return err
 	}
+
 	fileName := fmt.Sprintf("%s%s", baseFileName, extension)
+	log.Printf("Generating file: %s", baseFileName)
 	err = os.WriteFile(fileName, b, fs.ModePerm)
 	if err != nil {
 		return err
@@ -105,7 +109,114 @@ func SaveShortestTrail(mapid int, waypoints []point, pois []point, barriers map[
 	}
 	return nil
 }
+func SaveShortestTrailWithZones(mapid int, waypoints []Point, srcPoints []Point, zoneTrail ZoneTrail, barriers map[string]typedGroup, paths map[string]typedGroup, baseFileName string, extension string) error {
+	if glBarriers != nil || glPaths != nil {
+		panic("threading unsupported")
+	}
+	glBarriers = barriers
+	glPaths = paths
+	glWaypoints = waypoints
+	defer func() {
+		glBarriers = nil
+		glPaths = nil
+	}()
 
+	regions := zoneTrail.PartitionPoints(srcPoints)
+	for i, r := range regions {
+		g := path(r.Points).toGraph()
+		if r.Start == nil {
+			g.addWaypoints(waypoints)
+		} else {
+			g.addWaypoints([]Point{*r.Start})
+		}
+		if r.End != nil {
+			g.setEndpoint(*r.End)
+		}
+		r.graph = &g
+		regions[i] = r
+	}
+
+	outputList := []*graphPath{}
+	log.Printf("Optimizing Map: %d", mapid)
+	for _, region := range regions {
+		wg := sync.WaitGroup{}
+		pathList := region.graph.getPaths()
+		for i := range pathList {
+			index := i
+			p := pathList[i]
+			wg.Add(1)
+			go func() {
+				log.Printf("[%d] Starting distance: %.2f", index+1, p.EndDistance())
+				defer wg.Add(-1)
+				for p.optimize(p.bindEnd) {
+				}
+				log.Printf("[%d] Final map distance: %.2f", index+1, p.EndDistance())
+			}()
+		}
+		wg.Wait()
+		shortest, _ := pathList.shortest()
+		outputList = append(outputList, shortest)
+	}
+
+	points := make([][]Point, 0)
+	current := []Point{}
+	for i, path := range outputList {
+		pts := path.toPath()
+		//Only draw the first point (waypoint/start) if this is the first entry
+		if len(current) != 0 {
+			pts = pts[1:]
+		}
+		//If an endpoint binding is set, strip it. (these are strictly for controlling the approximate destination)
+		if path.bindEnd {
+			pts = pts[:len(pts)-1]
+		}
+		current = append(current, pts...)
+
+		//If the next segment has no starting point, this path ends (and you're expected to waypoint)
+		if regions[i].Start != nil {
+			points = append(points, current)
+			current = []Point{}
+		}
+	}
+	if len(current) > 0 {
+		points = append(points, current)
+	}
+
+	if len(points) == 1 {
+		b, err := PointsToTrlBytes(mapid, points[0])
+		if err != nil {
+			return err
+		}
+		fileName := fmt.Sprintf("%s%s", baseFileName, extension)
+		err = os.WriteFile(fileName, b, fs.ModePerm)
+		if err != nil {
+			return err
+		}
+	} else {
+		for index, ls := range points {
+			b, err := PointsToTrlBytes(mapid, ls)
+			if err != nil {
+				return err
+			}
+			fileName := fmt.Sprintf("%s_%d%s", baseFileName, index+1, extension)
+			err = os.WriteFile(fileName, b, fs.ModePerm)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	i := 0
+	for _, b := range glBarriers {
+		i++
+		b, err := PointsToTrlBytes(mapid, b._points)
+		if err == nil {
+			fileName := fmt.Sprintf("%s_barrier_%d%s", baseFileName, i, extension)
+			os.WriteFile(fileName, b, fs.ModePerm)
+		}
+	}
+	return nil
+}
 func newPath(args ...any) *graphPath {
 	root := graphPath{}
 	tmp := &root
@@ -264,7 +375,7 @@ func (path *graphPath) length() int {
 	}
 	return len
 }
-func (path *graphPath) optimize() bool {
+func (path *graphPath) optimize(bindEnd bool) bool {
 	if path == nil || path.next == nil {
 		return false
 	}
@@ -274,6 +385,9 @@ func (path *graphPath) optimize() bool {
 		target := src.next.next
 		for {
 			if target == nil {
+				break
+			}
+			if bindEnd && target.next == nil {
 				break
 			}
 			if found := src.trySwapNext(target, ALG_4p); found {
@@ -292,6 +406,9 @@ func (path *graphPath) optimize() bool {
 		target := src.next.next
 		for {
 			if target == nil {
+				break
+			}
+			if bindEnd && target.next == nil {
 				break
 			}
 			if found := src.trySwapNext(target, ALG_2p); found {
@@ -377,12 +494,17 @@ func (p path) trySwap2p(i, j int, bypasBarriers bool) bool {
 	return false
 }
 
-func findPathDistance(start point, path []typedGroup, dest point) float64 {
+func findPathDistance(start Point, path []typedGroup, dest Point) float64 {
 	if len(path) == 0 {
 		return BarrierValue //indicates no paths
 	}
 	pathLen := start.CalcDistance(path[0].first()) + path[len(path)-1].last().CalcDistance(dest)
-	for _, p := range path {
+	for index, p := range path {
+		//Add the distance from the previous path
+		if index > 0 {
+			pathLen += path[index-1].last().CalcDistance(p.first())
+		}
+		//Add the distance of each path
 		pathLen += p.distance()
 	}
 	return pathLen
@@ -437,7 +559,7 @@ func (node1 *graphNode) connect(node2 *graphNode) {
 		}
 	}
 }
-func (g *graph) add(pt point, required bool) *graphNode {
+func (g *graph) add(pt Point, required bool, endNode bool) *graphNode {
 	node := graphNode{
 		location: pt,
 		edges:    make([]edge, 0),
@@ -448,6 +570,11 @@ func (g *graph) add(pt point, required bool) *graphNode {
 		g.nodes[i] = graphNode
 	}
 	g.nodes = append(g.nodes, &node)
+	if !endNode && g.useEndpoint && len(g.nodes) > 1 {
+		tmp := g.nodes[len(g.nodes)-1]
+		g.nodes[len(g.nodes)-1] = g.nodes[len(g.nodes)-2]
+		g.nodes[len(g.nodes)-2] = tmp
+	}
 	return &node
 }
 
@@ -563,29 +690,33 @@ func (l graphPathList) shortest() (*graphPath, float64) {
 func (g *graph) getPaths() graphPathList {
 	out := make(graphPathList, len(g.waypoints))
 	for i, w := range g.waypoints {
-		current := &graphPath{node: w}
+		current := &graphPath{bindEnd: g.useEndpoint, node: w}
 		out[i] = current
 		required := g.requiredNodes()
 		for len(required) > 0 {
 			node := current.node.closest(required)
 			required = remove(required, node)
-			newNode := &graphPath{node: node}
+			newNode := &graphPath{bindEnd: g.useEndpoint, node: node}
 			current.next = newNode
 			current = newNode
 		}
 	}
 	return out
 }
-func (g *graph) addWaypoints(pts []point) {
+func (g *graph) addWaypoints(pts []Point) {
 	for _, p := range pts {
-		wp := g.add(p, false)
+		wp := g.add(p, false, false)
 		g.waypoints = append(g.waypoints, wp)
 	}
+}
+func (g *graph) setEndpoint(pt Point) {
+	g.useEndpoint = true
+	g.add(pt, true, true)
 }
 func (p path) toGraph() graph {
 	g := graph{}
 	for _, node := range p {
-		g.add(node, true)
+		g.add(node, true, false)
 	}
 	return g
 }
@@ -613,10 +744,10 @@ func (p path) optimizeAlg(p3 bool, bypassBarriers bool) bool {
 	return done
 }
 
-func (src point) CalcDistance(dst point) float64 {
-	diffX := dst.x - src.x
-	diffY := dst.y - src.y
-	diffZ := dst.z - src.z
+func (src Point) CalcDistance(dst Point) float64 {
+	diffX := dst.X - src.X
+	diffY := dst.Y - src.Y
+	diffZ := dst.Z - src.Z
 	if diffZ > 0 {
 		diffZ *= 1.5
 	} else if diffZ < 0 {
@@ -624,7 +755,7 @@ func (src point) CalcDistance(dst point) float64 {
 	}
 	return math.Sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
 }
-func (src point) Distance(dst point, allowWaypoints bool, bypassBarriers bool) float64 {
+func (src Point) Distance(dst Point, allowWaypoints bool, bypassBarriers bool) float64 {
 	var pathDistance float64
 	if src.barrier(dst) {
 		if !bypassBarriers {
@@ -659,15 +790,15 @@ func (t typedGroup) IsMushroom() bool {
 	return t.Type == GT_Mushroom
 }
 
-func (t *typedGroup) addPoint(pt point) {
+func (t *typedGroup) addPoint(pt Point) {
 	t._distance = t._distance + t._points[len(t._points)-1].CalcDistance(pt)
 	t._revDistance = t._revDistance + pt.CalcDistance(t._points[len(t._points)-1])
 	t._points = append(t._points, pt)
 }
-func (t typedGroup) last() point {
+func (t typedGroup) last() Point {
 	return t._points[len(t._points)-1]
 }
-func (t typedGroup) first() point {
+func (t typedGroup) first() Point {
 	return t._points[0]
 }
 func (t typedGroup) distance() float64 {
@@ -676,7 +807,7 @@ func (t typedGroup) distance() float64 {
 	}
 	return t._distance
 }
-func (src point) TakePath(path []typedGroup) (float64, point) {
+func (src Point) TakePath(path []typedGroup) (float64, Point) {
 	var out float64
 	for _, p := range path {
 		out += src.CalcDistance(p.first())
@@ -686,13 +817,13 @@ func (src point) TakePath(path []typedGroup) (float64, point) {
 	return out, src
 }
 
-func (src point) barrier(dst point) bool {
+func (src Point) barrier(dst Point) bool {
 	for _, b := range glBarriers {
 		if len(b._points) != 2 {
 			log.Println("Unsupported barrier")
 			return false
 		}
-		if b.Type == BT_DownOnly && dst.y < src.y {
+		if b.Type == BT_DownOnly && dst.Y < src.Y {
 			continue
 		}
 		if doIntersect(src, dst, b.first(), b.last()) {
@@ -702,10 +833,10 @@ func (src point) barrier(dst point) bool {
 	return false
 }
 
-func (src path) first() point {
+func (src path) first() Point {
 	return src[0]
 }
-func (src path) last() point {
+func (src path) last() Point {
 	return src[len(src)-1]
 }
 
@@ -730,7 +861,7 @@ func availablePaths(usedList []typedGroup) []typedGroup {
 }
 
 func (t typedGroup) Reverse() typedGroup {
-	rev := make([]point, len(t._points))
+	rev := make([]Point, len(t._points))
 	copy(rev, t._points)
 	slices.Reverse(rev)
 
@@ -747,7 +878,7 @@ func (t typedGroup) Reverse() typedGroup {
 	}
 }
 
-func (src point) pathTo(dst point, usedPaths []typedGroup) ([]typedGroup, bool) {
+func (src Point) pathTo(dst Point, usedPaths []typedGroup) ([]typedGroup, bool) {
 	if len(usedPaths) > 3 {
 		return []typedGroup{}, false
 	}
@@ -791,12 +922,12 @@ func (src point) pathTo(dst point, usedPaths []typedGroup) ([]typedGroup, bool) 
 	return cheapest(src, dst, possiblePaths), true
 }
 
-func calculatePathCost(src, dst point, group []typedGroup) float64 {
+func calculatePathCost(src, dst Point, group []typedGroup) float64 {
 	total, newSrc := src.TakePath(group)
 	return total + newSrc.Distance(dst, false, false)
 
 }
-func cheapest(src, dst point, groups [][]typedGroup) []typedGroup {
+func cheapest(src, dst Point, groups [][]typedGroup) []typedGroup {
 	min := math.MaxFloat64
 	index := 0
 	for i, next := range groups {
@@ -809,6 +940,6 @@ func cheapest(src, dst point, groups [][]typedGroup) []typedGroup {
 	return groups[index]
 }
 
-func (src point) findPath(dst point) ([]typedGroup, bool) {
+func (src Point) findPath(dst Point) ([]typedGroup, bool) {
 	return src.pathTo(dst, make([]typedGroup, 0))
 }

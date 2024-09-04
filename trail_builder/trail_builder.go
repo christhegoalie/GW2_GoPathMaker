@@ -25,13 +25,13 @@ const (
 type typedGroup struct {
 	name         string
 	reverseName  string
-	_points      []point
+	_points      []Point
 	Type         objectType
 	_distance    float64
 	_revDistance float64
 }
-type point struct {
-	x, y, z float64
+type Point struct {
+	X, Y, Z float64
 }
 
 func trim(s string) string {
@@ -46,9 +46,9 @@ func setVal(txt string, v *float64) error {
 	*v = flt
 	return nil
 }
-func lineToTriple(line string) (point, error) {
+func lineToTriple(line string) (Point, error) {
 	set := []bool{false, false, false}
-	out := point{}
+	out := Point{}
 	ls := strings.Split(line, " ")
 	for _, line := range ls {
 		pair := strings.Split(line, "=")
@@ -56,17 +56,17 @@ func lineToTriple(line string) (point, error) {
 			continue
 		}
 		if pair[0] == "xpos" {
-			if err := setVal(pair[1], &out.x); err != nil {
+			if err := setVal(pair[1], &out.X); err != nil {
 				return out, err
 			}
 			set[0] = true
 		} else if pair[0] == "ypos" {
-			if err := setVal(pair[1], &out.y); err != nil {
+			if err := setVal(pair[1], &out.Y); err != nil {
 				return out, err
 			}
 			set[1] = true
 		} else if pair[0] == "zpos" {
-			if err := setVal(pair[1], &out.z); err != nil {
+			if err := setVal(pair[1], &out.Z); err != nil {
 				return out, err
 			}
 			set[2] = true
@@ -112,9 +112,9 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 			log.Printf("error on line %d: %s", i, err.Error())
 			continue
 		}
-		binary.LittleEndian.PutUint32(out[offset:], math.Float32bits(float32(pt.x)))
-		binary.LittleEndian.PutUint32(out[offset+4:], math.Float32bits(float32(pt.y)))
-		binary.LittleEndian.PutUint32(out[offset+8:], math.Float32bits(float32(pt.z)))
+		binary.LittleEndian.PutUint32(out[offset:], math.Float32bits(float32(pt.X)))
+		binary.LittleEndian.PutUint32(out[offset+4:], math.Float32bits(float32(pt.Y)))
+		binary.LittleEndian.PutUint32(out[offset+8:], math.Float32bits(float32(pt.Z)))
 		offset += 12
 	}
 	if skipped != 0 {
@@ -123,14 +123,14 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	return out, nil
 }
 
-func PointsToTrlBytes(mapId int, points []point) ([]byte, error) {
+func PointsToTrlBytes(mapId int, points []Point) ([]byte, error) {
 	out := make([]byte, 8+12*(len(points)))
 	offset := 8
 	binary.LittleEndian.PutUint32(out[4:], uint32(mapId))
 	for _, p := range points {
-		binary.LittleEndian.PutUint32(out[offset:], math.Float32bits(float32(p.x)))
-		binary.LittleEndian.PutUint32(out[offset+4:], math.Float32bits(float32(p.y)))
-		binary.LittleEndian.PutUint32(out[offset+8:], math.Float32bits(float32(p.z)))
+		binary.LittleEndian.PutUint32(out[offset:], math.Float32bits(float32(p.X)))
+		binary.LittleEndian.PutUint32(out[offset+4:], math.Float32bits(float32(p.Y)))
+		binary.LittleEndian.PutUint32(out[offset+8:], math.Float32bits(float32(p.Z)))
 		offset += 12
 	}
 	return out, nil
@@ -147,12 +147,12 @@ func TRLBytesToLines(bytes []byte) ([]string, error) {
 	mapid := binary.LittleEndian.Uint32(bytes[4:])
 	out = append(out, fmt.Sprintf("mapid=%d", mapid))
 	for i := 8; i < len(bytes); i += 12 {
-		p := point{
-			x: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
-			y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
-			z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
+		p := Point{
+			X: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
+			Y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
+			Z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
 		}
-		out = append(out, fmt.Sprintf(`xpos="%.6f" ypos="%.6f" zpos="%.6f"`, p.x, p.y, p.z))
+		out = append(out, fmt.Sprintf(`xpos="%.6f" ypos="%.6f" zpos="%.6f"`, p.X, p.Y, p.Z))
 	}
 
 	return out, nil
@@ -167,12 +167,12 @@ func TRLBytesToPOIs(category string, bytes []byte) (int, []maps.POI, error) {
 	}
 	mapid := binary.LittleEndian.Uint32(bytes[4:])
 	for i := 8; i < len(bytes); i += 12 {
-		p := point{
-			x: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
-			y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
-			z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
+		p := Point{
+			X: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
+			Y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
+			Z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
 		}
-		out = append(out, maps.POI{CategoryReference: category, XPos: p.x, YPos: p.y, ZPos: p.z})
+		out = append(out, maps.POI{CategoryReference: category, XPos: p.X, YPos: p.Y, ZPos: p.Z})
 	}
 
 	return int(mapid), out, nil

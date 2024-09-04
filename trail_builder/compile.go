@@ -157,15 +157,15 @@ func fileExists(fname string) bool {
 	return true
 }
 
-func distance(p1, p2 point) float64 {
-	d1, d2, d3 := p2.x-p1.x, p2.y-p1.y, p2.z-p1.z
+func distance(p1, p2 Point) float64 {
+	d1, d2, d3 := p2.X-p1.X, p2.Y-p1.Y, p2.Z-p1.Z
 	return math.Sqrt(d1*d1 + d2*d2 + d3*d3)
 }
 
-func (src point) same(point point) bool {
+func (src Point) same(point Point) bool {
 	return distance(src, point) < 4
 }
-func checkForDuplicates(pts []point) error {
+func checkForDuplicates(pts []Point) error {
 	var err error
 	for i := 0; i < len(pts); i++ {
 		for j := i + 1; j < len(pts); j++ {

@@ -8,8 +8,8 @@ import (
 // 0 -> p, q, and r are collinear
 // 1 -> Clockwise
 // 2 -> Counterclockwise
-func orientation(p, q, r point) int {
-	val := (q.z-p.z)*(r.x-q.x) - (q.x-p.x)*(r.z-q.z)
+func orientation(p, q, r Point) int {
+	val := (q.Z-p.Z)*(r.X-q.X) - (q.X-p.X)*(r.Z-q.Z)
 	if val == 0 {
 		return 0 // Collinear
 	}
@@ -20,16 +20,16 @@ func orientation(p, q, r point) int {
 }
 
 // Function to check if point q lies on segment pr
-func onSegment(p, q, r point) bool {
-	if q.x <= math.Max(p.x, r.x) && q.x >= math.Min(p.x, r.x) &&
-		q.z <= math.Max(p.z, r.z) && q.z >= math.Min(p.z, r.z) {
+func onSegment(p, q, r Point) bool {
+	if q.X <= math.Max(p.X, r.X) && q.X >= math.Min(p.X, r.X) &&
+		q.Z <= math.Max(p.Z, r.Z) && q.Z >= math.Min(p.Z, r.Z) {
 		return true
 	}
 	return false
 }
 
 // Function to check if two line segments intersect
-func doIntersect(p1, q1, p2, q2 point) bool {
+func doIntersect(p1, q1, p2, q2 Point) bool {
 	// Find the four orientations needed for general and special cases
 	o1 := orientation(p1, q1, p2)
 	o2 := orientation(p1, q1, q2)

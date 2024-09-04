@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func readPoints(filePath string) []point {
-	out := []point{}
+func readPoints(filePath string) []Point {
+	out := []Point{}
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Println(err)
@@ -28,7 +28,7 @@ func readPoints(filePath string) []point {
 			}
 			continue
 		}
-		out = append(out, point{x: x, y: y, z: z})
+		out = append(out, Point{X: x, Y: y, Z: z})
 	}
 	return out
 }
@@ -52,7 +52,7 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 			log.Println("Unknown line: ", e.Error())
 			continue
 		}
-		pt := point{x: x, y: y, z: z}
+		pt := Point{X: x, Y: y, Z: z}
 		if name, ok := vals["name"]; ok {
 			if v, ok := out[name]; ok {
 				v.addPoint(pt)
@@ -61,7 +61,7 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 				v := typedGroup{
 					name:         name,
 					reverseName:  "Reversed " + name,
-					_points:      []point{pt},
+					_points:      []Point{pt},
 					Type:         Type_Unknown,
 					_distance:    0,
 					_revDistance: 0,
