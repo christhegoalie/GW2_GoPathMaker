@@ -748,12 +748,35 @@ func (src Point) CalcDistance(dst Point) float64 {
 	diffX := dst.X - src.X
 	diffY := dst.Y - src.Y
 	diffZ := dst.Z - src.Z
-	if diffZ > 0 {
-		diffZ *= 1.5
-	} else if diffZ < 0 {
-		diffZ /= 1.5
+
+	diffXSq := diffX * diffX
+	diffZSq := diffZ * diffZ
+	planarDistance := math.Sqrt(diffXSq + diffZSq)
+	climb := float64(1)
+	if planarDistance > 0 {
+		climb = diffY / planarDistance
 	}
-	return math.Sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
+
+	// Punish our distance for steep climbs.
+	// Steeper climb take far longer to traverse than regular distances
+	if diffY > 0 {
+		if climb > 4 { // larger than ~68 degree angle
+			diffY *= 4
+		}
+		if climb >= 1 { //45 Degree angle
+			diffY *= 2
+		} else if climb >= 0.5 {
+			diffY *= 1.2
+		}
+		//Steep drops are rewarded (griffon is too good here)
+	} else if diffY < 0 {
+		diffY /= 1.5
+	}
+
+	//calculate Y Squared after punishments
+	diffYSq := diffY * diffY
+
+	return math.Sqrt(diffXSq + diffYSq + diffZSq)
 }
 func (src Point) Distance(dst Point, allowWaypoints bool, bypassBarriers bool) float64 {
 	var pathDistance float64
