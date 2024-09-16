@@ -50,6 +50,7 @@ func main() {
 
 	correlations := getPOICorrelations(srcDirectory)
 	for _, c := range correlations.list {
+		log.Printf("Generating correlation info for: %s", c.category)
 		//Build a list of all unique points
 		//find the file with the highest point count (best approximation of the actual point count)
 		totalPoints := 0
@@ -59,6 +60,10 @@ func main() {
 				index = i
 				totalPoints = len(entry)
 			}
+		}
+		if index == -1 {
+			log.Printf("No data found for: %s", c.category)
+			continue
 		}
 
 		list := make(EntryPoints, 0)
