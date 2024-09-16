@@ -31,7 +31,8 @@ type typedGroup struct {
 	_revDistance float64
 }
 type Point struct {
-	X, Y, Z float64
+	X, Y, Z        float64
+	AllowDuplicate bool
 }
 
 func trim(s string) string {

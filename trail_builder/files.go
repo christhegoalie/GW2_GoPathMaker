@@ -28,7 +28,11 @@ func readPoints(filePath string) []Point {
 			}
 			continue
 		}
-		out = append(out, Point{X: x, Y: y, Z: z})
+		var allowDupe bool
+		if allowDupeSt, ok := mapString(vals, "AllowDuplicate"); ok {
+			allowDupe = allowDupeSt == "1" || strings.EqualFold(allowDupeSt, "true") || strings.EqualFold(allowDupeSt, "yes")
+		}
+		out = append(out, Point{X: x, Y: y, Z: z, AllowDuplicate: allowDupe})
 	}
 	return out
 }

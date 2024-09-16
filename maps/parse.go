@@ -3,6 +3,7 @@ package maps
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Convert a line of trail information into a trail object
@@ -48,12 +49,18 @@ func parsePoi(category string, line string) (POI, []string, error) {
 		category = trim(cat)
 		delete(m, "category")
 	}
+	var allowDupe bool
+	if allowDupeSt, ok := m["AllowDuplicate"]; ok {
+		allowDupe = allowDupeSt == "1" || strings.EqualFold(allowDupeSt, "true") || strings.EqualFold(allowDupeSt, "yes")
+		delete(m, "AllowDuplicate")
+	}
 
 	return POI{
 		CategoryReference: category,
 		XPos:              x,
 		YPos:              y,
 		ZPos:              z,
+		AllowDuplicate:    allowDupe,
 		Keys:              m,
 	}, warns, nil
 }

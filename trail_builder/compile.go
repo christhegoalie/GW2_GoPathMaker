@@ -178,8 +178,10 @@ func checkForDuplicates(pts []Point) error {
 	for i := 0; i < len(pts); i++ {
 		for j := i + 1; j < len(pts); j++ {
 			if pts[i].same(pts[j]) {
-				err = fmt.Errorf("duplicate point i:%d, (%+v), j:%d, (%+v)", i, pts[i], j, pts[j])
-				log.Println(err.Error())
+				if !pts[i].AllowDuplicate || !pts[j].AllowDuplicate {
+					err = fmt.Errorf("duplicate point i:%d, (%+v), j:%d, (%+v)", i, pts[i], j, pts[j])
+					log.Println(err.Error())
+				}
 			}
 		}
 	}
