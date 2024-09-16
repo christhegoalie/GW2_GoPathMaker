@@ -51,6 +51,7 @@ func parsePoi(category string, line string) (POI, []string, error) {
 	}
 	var allowDupe bool
 	if allowDupeSt, ok := m["AllowDuplicate"]; ok {
+		allowDupeSt = trim(allowDupeSt)
 		allowDupe = allowDupeSt == "1" || strings.EqualFold(allowDupeSt, "true") || strings.EqualFold(allowDupeSt, "yes")
 		delete(m, "AllowDuplicate")
 	}
