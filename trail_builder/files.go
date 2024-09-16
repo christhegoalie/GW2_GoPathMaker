@@ -53,7 +53,7 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 			continue
 		}
 		pt := Point{X: x, Y: y, Z: z}
-		if name, ok := vals["name"]; ok {
+		if name, ok := mapString(vals, "name"); ok {
 			if v, ok := out[name]; ok {
 				v.addPoint(pt)
 				out[name] = v
@@ -66,7 +66,7 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 					_distance:    0,
 					_revDistance: 0,
 				}
-				if typeString, ok := vals["type"]; ok {
+				if typeString, ok := mapString(vals, "type"); ok {
 					switch strings.ToLower(typeString) {
 					case "downonly":
 						v.Type = BT_DownOnly
@@ -88,19 +88,19 @@ func readTypedGroup(filePath string) map[string]typedGroup {
 	return out
 }
 
-func getPosition(m map[string]string) (float64, float64, float64, error) {
+func getPosition(m map[string]any) (float64, float64, float64, error) {
 	var xst, yst, zst string
 	var x, y, z float64
 	var ok bool
 	var err error
 
-	if xst, ok = m["xpos"]; !ok {
+	if xst, ok = mapString(m, "xpos"); !ok {
 		return x, y, z, errors.New("xpos not defined")
 	}
-	if yst, ok = m["ypos"]; !ok {
+	if yst, ok = mapString(m, "ypos"); !ok {
 		return x, y, z, errors.New("ypos not defined")
 	}
-	if zst, ok = m["zpos"]; !ok {
+	if zst, ok = mapString(m, "zpos"); !ok {
 		return x, y, z, errors.New("zpos not defined")
 	}
 	xst = trim(xst)

@@ -76,24 +76,20 @@ func compileAutoPaths(srcPath string) error {
 			continue
 		}
 
-		var mapName string
-		var fileName string
 		var ok bool
+		var fileLs []string
+		var mapName string
+
 		m := readMap(string(b), '\n')
-		if mapName, ok = m["map"]; !ok {
+		if mapName, ok = mapString(m, "map"); !ok {
 			log.Printf("Missing map name: %s", f)
 			continue
-		} else if fileName, ok = m["file"]; !ok {
+		} else if fileLs, ok = mapStringArray(m, "file"); !ok {
 			log.Printf("File name not specified: %s", f)
 			continue
 		}
 		mapName = trim(mapName)
-		fileName = trim(fileName)
 		mapPath := fmt.Sprintf("%s%s", mapsPath, mapName)
-		if !fileExists(mapPath) {
-			log.Printf("Src POI File %s not found: %s", fileName, f)
-			continue
-		}
 		mapId, _, err := maps.ReadMapInfo(mapPath)
 		if err != nil {
 			return err
@@ -102,12 +98,19 @@ func compileAutoPaths(srcPath string) error {
 		barrierFile := fmt.Sprintf("%s/%s", mapPath, files.BarriersFile)
 		waypointsFile := fmt.Sprintf("%s/%s", mapPath, files.WaypointsFile)
 		pathsFile := fmt.Sprintf("%s/%s", mapPath, files.PathsFile)
-		poiFile := fmt.Sprintf("%s/%s", mapPath, fileName)
 
 		barriers := readTypedGroup(barrierFile)
 		waypoints := readPoints(waypointsFile)
 		paths := readTypedGroup(pathsFile)
-		pois := readPoints(poiFile)
+		var pois []Point = []Point{}
+		for _, f := range fileLs {
+			poiFile := fmt.Sprintf("%s/%s", mapPath, f)
+			pois = append(pois, readPoints(poiFile)...)
+		}
+		if len(pois) == 0 {
+			log.Printf("No POIs found for: %s", mapName)
+			continue
+		}
 		if err := checkForDuplicates(pois); err != nil {
 			log.Printf("Path generation failed [%s], error: %s", mapName, err.Error())
 			continue
@@ -116,12 +119,17 @@ func compileAutoPaths(srcPath string) error {
 		if checkCompileTime {
 			lastCompile := dstFileInfo.ModTime()
 			if !forceRecompile {
-				if !fileChangedSince(lastCompile, dstPath) &&
-					!fileChangedSince(lastCompile, barrierFile) &&
-					!fileChangedSince(lastCompile, waypointsFile) &&
-					!fileChangedSince(lastCompile, pathsFile) &&
-					!fileChangedSince(lastCompile, poiFile) {
+				if fileChangedSince(lastCompile, dstPath) ||
+					fileChangedSince(lastCompile, barrierFile) ||
+					fileChangedSince(lastCompile, waypointsFile) ||
+					fileChangedSince(lastCompile, pathsFile) {
 					continue
+				}
+				for _, f := range fileLs {
+					poiFile := fmt.Sprintf("%s/%s", mapPath, f)
+					if fileChangedSince(lastCompile, poiFile) {
+						continue
+					}
 				}
 			}
 		}

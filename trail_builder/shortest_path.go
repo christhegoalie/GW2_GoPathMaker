@@ -98,15 +98,17 @@ func SaveShortestTrail(mapid int, waypoints []Point, pois []Point, barriers map[
 		return err
 	}
 
-	i := 0
-	for _, b := range glBarriers {
-		i++
-		b, err := PointsToTrlBytes(mapid, b._points)
-		if err == nil {
-			fileName := fmt.Sprintf("%s_barrier_%d%s", baseFileName, i, extension)
-			os.WriteFile(fileName, b, fs.ModePerm)
+	/*
+		i := 0
+		for _, b := range glBarriers {
+			i++
+			b, err := PointsToTrlBytes(mapid, b._points)
+			if err == nil {
+				fileName := fmt.Sprintf("%s_barrier_%d%s", baseFileName, i, extension)
+				os.WriteFile(fileName, b, fs.ModePerm)
+			}
 		}
-	}
+	*/
 	return nil
 }
 func SaveShortestTrailWithZones(mapid int, waypoints []Point, srcPoints []Point, zoneTrail ZoneTrail, barriers map[string]typedGroup, paths map[string]typedGroup, baseFileName string, extension string) error {

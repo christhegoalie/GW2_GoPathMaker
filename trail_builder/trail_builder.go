@@ -90,12 +90,16 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	}
 
 	var mapId int64
-	var mapIdStr string
 	var ok bool
 	var err error
+	var mapVal any
+	var mapIdStr string
 
 	m := readMap(strings.TrimSpace(lines[0]), ' ')
-	if mapIdStr, ok = m["mapid"]; ok {
+	if mapVal, ok = m["mapid"]; ok {
+		if mapIdStr, ok = mapVal.(string); !ok {
+			return []byte{}, errors.New("dupplicate mapid fields")
+		}
 		mapId, err = strconv.ParseInt(trim(mapIdStr), 10, 32)
 		if err != nil {
 			return []byte{}, err
@@ -178,9 +182,26 @@ func TRLBytesToPOIs(category string, bytes []byte) (int, []maps.POI, error) {
 	return int(mapid), out, nil
 }
 
+func addUpdateKey(m map[string]any, key string, val string) {
+	if old, ok := m[key]; ok {
+		var arr []string
+		switch v := old.(type) {
+		case []string:
+			arr = append(v, trim(val))
+		case string:
+			arr = []string{v, trim(val)}
+		default:
+			panic("invalid data type")
+		}
+		m[key] = arr
+	} else {
+		m[key] = trim(val)
+	}
+}
+
 // Read a space seperated line of key value pairs seperated by "=", and return a map
-func readMap(line string, delim byte) map[string]string {
-	out := make(map[string]string)
+func readMap(line string, delim byte) map[string]any {
+	out := make(map[string]any)
 	needEqual := true
 	quoted := false
 	key := ""
@@ -200,7 +221,7 @@ func readMap(line string, delim byte) map[string]string {
 		} else {
 			if !quoted && line[i] == delim {
 				needEqual = true
-				out[key] = trim(tmp.String())
+				addUpdateKey(out, key, tmp.String())
 				tmp.Reset()
 				key = ""
 				continue
@@ -213,7 +234,27 @@ func readMap(line string, delim byte) map[string]string {
 		}
 	}
 	if key != "" {
-		out[key] = trim(tmp.String())
+		addUpdateKey(out, key, tmp.String())
 	}
 	return out
+}
+
+func mapString(src map[string]any, key string) (string, bool) {
+	if val, ok := src[key]; ok {
+		if v, ok := val.(string); ok {
+			return v, true
+		}
+	}
+	return "", false
+}
+func mapStringArray(src map[string]any, key string) ([]string, bool) {
+	if val, ok := src[key]; ok {
+		switch v := val.(type) {
+		case string:
+			return []string{v}, true
+		case []string:
+			return v, true
+		}
+	}
+	return []string{}, false
 }
