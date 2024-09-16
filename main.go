@@ -26,6 +26,7 @@ var srcDirectory string
 // You can override this method with a local init file.
 // See installer.go.example for example code (copy the file as "installer.go")
 var installScript = func(packageFile string) {}
+var preInstallScript = func(packageFile string) {}
 
 func main() {
 	outputPackage := *flag.String("n", DefaultPackageName, "Output Package Name")
@@ -35,6 +36,7 @@ func main() {
 	packageZipName := fmt.Sprintf("%s.taco", outputPackage)
 	outputZipPath := fmt.Sprintf("%s/%s", buildPath, packageZipName)
 	buildFolder := fmt.Sprintf("%s/%s/", buildPath, outputPackage)
+	preInstallScript(outputZipPath)
 
 	maps.SetValidation(validateFile)
 	categories.SetValidation(validateFile)
