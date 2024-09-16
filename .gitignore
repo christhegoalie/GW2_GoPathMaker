@@ -1,3 +1,6 @@
 build
 installer.go
 gw2_markers_gen*
+ShellshotMarkerPack/assets/ShellshotMarkerPack/tmp
+ShellshotMarkerPack/tmp
+warclawcaches_barrier_*.trl
