@@ -1,11 +1,14 @@
 package trailbuilder
 
-import "fmt"
+import (
+	"fmt"
+	"gw2_markers_gen/location"
+)
 
 type Region struct {
-	Start    Point   `json:"start"`
-	End      Point   `json:"end"`
-	Vertices []Point `json:"vertices"`
+	Start    location.Point   `json:"start"`
+	End      location.Point   `json:"end"`
+	Vertices []location.Point `json:"vertices"`
 }
 type ZoneTrail struct {
 	Map     string   `json:"map"`
@@ -14,16 +17,16 @@ type ZoneTrail struct {
 }
 
 type PointRegion struct {
-	Start  *Point
-	End    *Point
-	Points []Point
-	graph  *graph
+	Start  *location.Point
+	End    *location.Point
+	Points []location.Point
+	graph  *location.Graph
 }
 
-func (trail ZoneTrail) PartitionPoints(input []Point) []PointRegion {
+func (trail ZoneTrail) PartitionPoints(input []location.Point) []PointRegion {
 	out := make([]PointRegion, len(trail.Regions))
 	for i := range out {
-		out[i].Points = make([]Point, 0)
+		out[i].Points = make([]location.Point, 0)
 	}
 pointLoop:
 	for _, pt := range input {
@@ -40,7 +43,7 @@ pointLoop:
 }
 
 // IsPointInPolygon checks if a point is inside a polygon using the Ray Casting algorithm
-func (region Region) Contains(point Point) bool {
+func (region Region) Contains(point location.Point) bool {
 	n := len(region.Vertices)
 	if n < 3 {
 		return false
@@ -59,7 +62,7 @@ func (region Region) Contains(point Point) bool {
 }
 
 // isRayIntersectingEdge checks if a horizontal ray from the point intersects with an edge of the polygon
-func IntersectsEdge(point, vertex1, vertex2 Point) bool {
+func IntersectsEdge(point, vertex1, vertex2 location.Point) bool {
 	// Ensure vertex1 is below vertex2 for easier calculations
 	if vertex1.Z > vertex2.Z {
 		vertex1, vertex2 = vertex2, vertex1

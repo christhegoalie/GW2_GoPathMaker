@@ -3,6 +3,7 @@ package categories
 import (
 	"fmt"
 	"gw2_markers_gen/files"
+	"gw2_markers_gen/utils"
 	"os"
 	"path/filepath"
 	"slices"
@@ -153,7 +154,7 @@ func validate(key, val string) string {
 }
 
 func validateSet(v string, set []int) string {
-	v = trim(v)
+	v = utils.Trim(v)
 	iVal, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		return fmt.Sprintf("Expected integer, found %s", v)
@@ -164,7 +165,7 @@ func validateSet(v string, set []int) string {
 	return ""
 }
 func validateNumeric(v string) string {
-	v = trim(v)
+	v = utils.Trim(v)
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		return "not numeric"
@@ -175,7 +176,7 @@ func validateNumeric(v string) string {
 }
 
 func (c Category) MatchString(st string) bool {
-	return c.MatchList(strings.Split(trim(st), "."))
+	return c.MatchList(strings.Split(utils.Trim(st), "."))
 }
 func (c Category) MatchList(st []string) bool {
 	if len(st) == 0 {
@@ -193,8 +194,4 @@ func (c Category) MatchList(st []string) bool {
 	}
 
 	return false
-}
-
-func trim(s string) string {
-	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(s), `"`), `"`)
 }

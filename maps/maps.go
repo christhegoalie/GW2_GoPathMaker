@@ -41,11 +41,6 @@ func Compile(categories []categories.Category, path string) ([]Map, []string) {
 	return out, warns
 }
 
-// Helper to deal with quoted strings
-func trim(s string) string {
-	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(s), `"`), `"`)
-}
-
 // Pulls Category out of the line if present
 // Returns: X, X, false on line not being a valid pair
 // Return: X, Warning, true on 1st line being a pair not defining a category

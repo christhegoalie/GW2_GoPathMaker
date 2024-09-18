@@ -4,52 +4,26 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"gw2_markers_gen/location"
 	"gw2_markers_gen/maps"
+	"gw2_markers_gen/utils"
 	"log"
 	"math"
 	"strconv"
 	"strings"
 )
 
-type objectType int
-
-const (
-	Type_Unknown objectType = iota
-	BT_Wall
-	BT_DownOnly
-
-	GT_Mushroom
-	GT_ONEWAY
-)
-
-type typedGroup struct {
-	name         string
-	reverseName  string
-	_points      []Point
-	Type         objectType
-	_distance    float64
-	_revDistance float64
-}
-type Point struct {
-	X, Y, Z        float64
-	AllowDuplicate bool
-}
-
-func trim(s string) string {
-	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(s), `"`), `"`)
-}
-
 func setVal(txt string, v *float64) error {
-	flt, err := strconv.ParseFloat(trim(txt), 64)
+	flt, err := strconv.ParseFloat(utils.Trim(txt), 64)
 	if err != nil {
 		return err
 	}
 	*v = flt
 	return nil
 }
-func lineToTriple(line string) (Point, error) {
+func lineToTriple(line string) (location.Point, error) {
 	set := []bool{false, false, false}
-	out := Point{}
+	out := location.Point{}
 	ls := strings.Split(line, " ")
 	for _, line := range ls {
 		pair := strings.Split(line, "=")
@@ -96,12 +70,12 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	var mapVal any
 	var mapIdStr string
 
-	m := readMap(strings.TrimSpace(lines[0]), ' ')
+	m := utils.ReadMap(strings.TrimSpace(lines[0]), ' ')
 	if mapVal, ok = m["mapid"]; ok {
 		if mapIdStr, ok = mapVal.(string); !ok {
 			return []byte{}, errors.New("dupplicate mapid fields")
 		}
-		mapId, err = strconv.ParseInt(trim(mapIdStr), 10, 32)
+		mapId, err = strconv.ParseInt(utils.Trim(mapIdStr), 10, 32)
 		if err != nil {
 			return []byte{}, err
 		}
@@ -128,7 +102,7 @@ func LinesToTRLBytes(lines []string) ([]byte, error) {
 	return out, nil
 }
 
-func PointsToTrlBytes(mapId int, points []Point) ([]byte, error) {
+func PointsToTrlBytes(mapId int, points []location.Point) ([]byte, error) {
 	out := make([]byte, 8+12*(len(points)))
 	offset := 8
 	binary.LittleEndian.PutUint32(out[4:], uint32(mapId))
@@ -152,7 +126,7 @@ func TRLBytesToLines(bytes []byte) ([]string, error) {
 	mapid := binary.LittleEndian.Uint32(bytes[4:])
 	out = append(out, fmt.Sprintf("mapid=%d", mapid))
 	for i := 8; i < len(bytes); i += 12 {
-		p := Point{
+		p := location.Point{
 			X: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
 			Y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
 			Z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
@@ -172,7 +146,7 @@ func TRLBytesToPOIs(category string, bytes []byte) (int, []maps.POI, error) {
 	}
 	mapid := binary.LittleEndian.Uint32(bytes[4:])
 	for i := 8; i < len(bytes); i += 12 {
-		p := Point{
+		p := location.Point{
 			X: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i:]))),
 			Y: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+4:]))),
 			Z: float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes[i+8:]))),
@@ -181,81 +155,4 @@ func TRLBytesToPOIs(category string, bytes []byte) (int, []maps.POI, error) {
 	}
 
 	return int(mapid), out, nil
-}
-
-func addUpdateKey(m map[string]any, key string, val string) {
-	if old, ok := m[key]; ok {
-		var arr []string
-		switch v := old.(type) {
-		case []string:
-			arr = append(v, trim(val))
-		case string:
-			arr = []string{v, trim(val)}
-		default:
-			panic("invalid data type")
-		}
-		m[key] = arr
-	} else {
-		m[key] = trim(val)
-	}
-}
-
-// Read a space seperated line of key value pairs seperated by "=", and return a map
-func readMap(line string, delim byte) map[string]any {
-	out := make(map[string]any)
-	needEqual := true
-	quoted := false
-	key := ""
-	tmp := strings.Builder{}
-	for i := 0; i < len(line); i++ {
-		if needEqual {
-			if line[i] == '=' {
-				if tmp.Len() == 0 {
-					continue
-				}
-				key = tmp.String()
-				tmp.Reset()
-				needEqual = false
-			} else {
-				tmp.WriteByte(line[i])
-			}
-		} else {
-			if !quoted && line[i] == delim {
-				needEqual = true
-				addUpdateKey(out, key, tmp.String())
-				tmp.Reset()
-				key = ""
-				continue
-			}
-
-			tmp.WriteByte(line[i])
-			if line[i] == '"' {
-				quoted = !quoted
-			}
-		}
-	}
-	if key != "" {
-		addUpdateKey(out, key, tmp.String())
-	}
-	return out
-}
-
-func mapString(src map[string]any, key string) (string, bool) {
-	if val, ok := src[key]; ok {
-		if v, ok := val.(string); ok {
-			return v, true
-		}
-	}
-	return "", false
-}
-func mapStringArray(src map[string]any, key string) ([]string, bool) {
-	if val, ok := src[key]; ok {
-		switch v := val.(type) {
-		case string:
-			return []string{v}, true
-		case []string:
-			return v, true
-		}
-	}
-	return []string{}, false
 }

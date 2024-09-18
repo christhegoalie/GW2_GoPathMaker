@@ -1,4 +1,4 @@
-package trailbuilder
+package location
 
 import (
 	"math"

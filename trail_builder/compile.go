@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"gw2_markers_gen/files"
+	"gw2_markers_gen/location"
 	"gw2_markers_gen/maps"
+	"gw2_markers_gen/utils"
 	"io/fs"
 	"log"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,15 +81,15 @@ func compileAutoPaths(srcPath string) error {
 		var fileLs []string
 		var mapName string
 
-		m := readMap(string(b), '\n')
-		if mapName, ok = mapString(m, "map"); !ok {
+		m := utils.ReadMap(string(b), '\n')
+		if mapName, ok = utils.MapString(m, "map"); !ok {
 			log.Printf("Missing map name: %s", f)
 			continue
-		} else if fileLs, ok = mapStringArray(m, "file"); !ok {
+		} else if fileLs, ok = utils.MapStringArray(m, "file"); !ok {
 			log.Printf("File name not specified: %s", f)
 			continue
 		}
-		mapName = trim(mapName)
+		mapName = utils.Trim(mapName)
 		mapPath := fmt.Sprintf("%s%s", mapsPath, mapName)
 		mapId, _, err := maps.ReadMapInfo(mapPath)
 		if err != nil {
@@ -99,13 +100,13 @@ func compileAutoPaths(srcPath string) error {
 		waypointsFile := fmt.Sprintf("%s/%s", mapPath, files.WaypointsFile)
 		pathsFile := fmt.Sprintf("%s/%s", mapPath, files.PathsFile)
 
-		barriers := readTypedGroup(barrierFile)
-		waypoints := readPoints(waypointsFile)
-		paths := readTypedGroup(pathsFile)
-		var pois []Point = []Point{}
+		barriers := files.ReadTypedGroup(barrierFile)
+		waypoints := files.ReadPoints(waypointsFile)
+		paths := files.ReadTypedGroup(pathsFile)
+		var pois []location.Point = []location.Point{}
 		for _, f := range fileLs {
 			poiFile := fmt.Sprintf("%s/%s", mapPath, f)
-			pois = append(pois, readPoints(poiFile)...)
+			pois = append(pois, files.ReadPoints(poiFile)...)
 		}
 		if len(pois) == 0 {
 			log.Printf("No POIs found for: %s", mapName)
@@ -120,15 +121,15 @@ func compileAutoPaths(srcPath string) error {
 			lastCompile := dstFileInfo.ModTime()
 			if !forceRecompile {
 				changed := false
-				if fileChangedSince(lastCompile, dstPath) ||
-					fileChangedSince(lastCompile, barrierFile) ||
-					fileChangedSince(lastCompile, waypointsFile) ||
-					fileChangedSince(lastCompile, pathsFile) {
+				if files.FileChangedSince(lastCompile, dstPath) ||
+					files.FileChangedSince(lastCompile, barrierFile) ||
+					files.FileChangedSince(lastCompile, waypointsFile) ||
+					files.FileChangedSince(lastCompile, pathsFile) {
 					changed = true
 				}
 				for _, f := range fileLs {
 					poiFile := fmt.Sprintf("%s/%s", mapPath, f)
-					if fileChangedSince(lastCompile, poiFile) {
+					if files.FileChangedSince(lastCompile, poiFile) {
 						changed = true
 						break
 					}
@@ -170,19 +171,11 @@ func fileExists(fname string) bool {
 	return true
 }
 
-func distance(p1, p2 Point) float64 {
-	d1, d2, d3 := p2.X-p1.X, p2.Y-p1.Y, p2.Z-p1.Z
-	return math.Sqrt(d1*d1 + d2*d2 + d3*d3)
-}
-
-func (src Point) same(point Point) bool {
-	return distance(src, point) < 4
-}
-func checkForDuplicates(pts []Point) error {
+func checkForDuplicates(pts []location.Point) error {
 	var err error
 	for i := 0; i < len(pts); i++ {
 		for j := i + 1; j < len(pts); j++ {
-			if pts[i].same(pts[j]) {
+			if pts[i].Same(pts[j]) {
 				if !pts[i].AllowDuplicate || !pts[j].AllowDuplicate {
 					err = fmt.Errorf("duplicate point i:%d, (%+v), j:%d, (%+v)", i, pts[i], j, pts[j])
 					log.Println(err.Error())

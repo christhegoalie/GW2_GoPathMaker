@@ -9,10 +9,10 @@ import (
 	"gw2_markers_gen/files"
 	"gw2_markers_gen/maps"
 	trailbuilder "gw2_markers_gen/trail_builder"
+	"gw2_markers_gen/utils"
 	"io/fs"
 	"log"
 	"os"
-	"strings"
 )
 
 const DefaultPackageName = "ShellshotMarkerPack"
@@ -117,14 +117,10 @@ func addFiles(w *zip.Writer, basePath, baseInZip string) error {
 }
 
 func validateFile(v string) string {
-	v = trim(v)
+	v = utils.Trim(v)
 	fname := fmt.Sprintf("%s/%s", srcDirectory, v)
 	if _, err := os.Stat(fname); errors.Is(err, os.ErrNotExist) {
 		return fmt.Sprintf("File %s not found", v)
 	}
 	return ""
-}
-
-func trim(s string) string {
-	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(s), `"`), `"`)
 }

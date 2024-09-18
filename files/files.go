@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 const CategoryExtension = ".cat"
@@ -89,4 +90,12 @@ func Copy(src, dst string) (int64, error) {
 	defer destination.Close()
 	nBytes, err := io.Copy(destination, source)
 	return nBytes, err
+}
+
+func FileChangedSince(timestamp time.Time, filePath string) bool {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return true
+	}
+	return info.ModTime().After(timestamp)
 }

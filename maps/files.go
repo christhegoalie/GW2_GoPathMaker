@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gw2_markers_gen/categories"
 	"gw2_markers_gen/files"
+	"gw2_markers_gen/utils"
 	"log"
 	"os"
 	"strconv"
@@ -90,77 +91,6 @@ func ReadPOIs(categories []categories.Category, fileName string) ([]POI, []strin
 	return pois, warns, nil
 }
 
-// Read a space seperated line of key value pairs seperated by "=", and return a map
-func readMap(line string) map[string]string {
-	out := make(map[string]string)
-	needEqual := true
-	quoted := false
-	key := ""
-	tmp := strings.Builder{}
-	for i := 0; i < len(line); i++ {
-		if needEqual {
-			if line[i] == '=' {
-				if tmp.Len() == 0 {
-					continue
-				}
-				key = tmp.String()
-				tmp.Reset()
-				needEqual = false
-			} else {
-				tmp.WriteByte(line[i])
-			}
-		} else {
-			if !quoted && line[i] == ' ' {
-				needEqual = true
-				out[key] = tmp.String()
-				tmp.Reset()
-				key = ""
-				continue
-			}
-
-			tmp.WriteByte(line[i])
-			if line[i] == '"' {
-				quoted = !quoted
-			}
-		}
-	}
-	if key != "" {
-		out[key] = tmp.String()
-	}
-	return out
-}
-
-// Return xpos, ypos, zpos, or an error from a line (read from file )if any issue is detected
-func getPosition(m map[string]string) (float64, float64, float64, error) {
-	var xst, yst, zst string
-	var x, y, z float64
-	var ok bool
-	var err error
-
-	if xst, ok = m["xpos"]; !ok {
-		return x, y, z, errors.New("xpos not defined")
-	}
-	if yst, ok = m["ypos"]; !ok {
-		return x, y, z, errors.New("ypos not defined")
-	}
-	if zst, ok = m["zpos"]; !ok {
-		return x, y, z, errors.New("zpos not defined")
-	}
-	xst = trim(xst)
-	yst = trim(yst)
-	zst = trim(zst)
-	if x, err = strconv.ParseFloat(xst, 64); err != nil {
-		return x, y, z, errors.New("invalid xpos")
-	}
-	if y, err = strconv.ParseFloat(yst, 64); err != nil {
-		return x, y, z, errors.New("invalid ypos")
-	}
-	if z, err = strconv.ParseFloat(zst, 64); err != nil {
-		return x, y, z, errors.New("invalid zpos")
-	}
-	return x, y, z, nil
-}
-
 // Read the "mapinfo.txt" file from the map directory
 // Returns an error if the file is not present, or does not contain a map id (resulting in no markers being generated)
 func ReadMapInfo(path string) (int, string, error) {
@@ -181,7 +111,7 @@ func ReadMapInfo(path string) (int, string, error) {
 			continue
 		}
 		if strings.EqualFold("id", pair[0]) {
-			iVal, err := strconv.ParseInt(trim(pair[1]), 10, 64)
+			iVal, err := strconv.ParseInt(utils.Trim(pair[1]), 10, 64)
 			if err != nil {
 				return 0, "", fmt.Errorf("[%s] Invalid map id: %s", fname, pair[1])
 			}
