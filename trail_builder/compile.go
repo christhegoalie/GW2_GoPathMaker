@@ -119,17 +119,22 @@ func compileAutoPaths(srcPath string) error {
 		if checkCompileTime {
 			lastCompile := dstFileInfo.ModTime()
 			if !forceRecompile {
+				changed := false
 				if fileChangedSince(lastCompile, dstPath) ||
 					fileChangedSince(lastCompile, barrierFile) ||
 					fileChangedSince(lastCompile, waypointsFile) ||
 					fileChangedSince(lastCompile, pathsFile) {
-					continue
+					changed = true
 				}
 				for _, f := range fileLs {
 					poiFile := fmt.Sprintf("%s/%s", mapPath, f)
 					if fileChangedSince(lastCompile, poiFile) {
-						continue
+						changed = true
+						break
 					}
+				}
+				if !changed {
+					continue
 				}
 			}
 		}
