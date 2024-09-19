@@ -1,6 +1,9 @@
 package utils
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func MapString(src map[string]any, key string) (string, bool) {
 	if val, ok := src[key]; ok {
@@ -88,10 +91,10 @@ func ToStringMap(in map[string]any) map[string]string {
 	for key, val := range in {
 		switch v := val.(type) {
 		case string:
-			out[key] = v
+			out[key] = fmt.Sprintf(`"%s"`, v)
 		case []string:
 			if len(v) > 0 {
-				out[key] = v[0]
+				out[key] = fmt.Sprintf(`"%s"`, v[0])
 			}
 		}
 	}
