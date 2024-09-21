@@ -30,7 +30,7 @@ xpos="568.0355" ypos="216.8362" zpos="-11.11125" lesser
 xpos="761.5485" ypos="306.8145" zpos="-100.2309" minor
 xpos="897.7623" ypos="408.6865" zpos="-239.3601" lesser
 xpos="865.8613" ypos="320.726" zpos="-73.22832" lesser
-xpos="951.4703" ypos="332.6825" zpos="53.49501" minor
+xpos="945.6737" ypos="333.1729" zpos="51.307" minor
 xpos="844.1848" ypos="362.137" zpos="256.0799" lesser
 xpos="875.1811" ypos="1.42925" zpos="480.1456" lesser
 xpos="-605.2512" ypos="12.00511" zpos="-93.42168" minor
