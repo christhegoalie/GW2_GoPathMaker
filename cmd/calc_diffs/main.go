@@ -26,6 +26,8 @@ type exec struct {
 	diff2Output string
 }
 
+var ignore func() blish.PoiList
+
 func main() {
 	execs := []exec{
 		{
@@ -48,8 +50,8 @@ func main() {
 		points1 := files.ReadAllPoints(ex.src1Path)
 		points2 := files.ReadAllPoints(ex.src2Path)
 
-		diff1 := calcDiff(points1, points2)
-		diff2 := calcDiff(points2, points1)
+		diff1 := calcDiff(points1, points2, ignore())
+		diff2 := calcDiff(points2, points1, ignore())
 
 		if len(diff1) > 0 {
 			b, _ := json.MarshalIndent(diff1, "", "  ")
@@ -74,9 +76,12 @@ func newUUID() string {
 	return base64.StdEncoding.EncodeToString(uuid[:])
 }
 
-func calcDiff(ls1 blish.PoiList, ls2 blish.PoiList) blish.PoiList {
+func calcDiff(ls1 blish.PoiList, ls2 blish.PoiList, ignore blish.PoiList) blish.PoiList {
 	out := make(blish.PoiList, 0)
 	for _, p := range ls2 {
+		if ignore != nil && ignore.Contains(p.Point()) {
+			continue
+		}
 		if !ls1.Contains(p.Point()) {
 			out = append(out, p)
 		}
