@@ -13,10 +13,12 @@ type PointList []Point
 
 var GLOBAL_Barriers map[string]TypedGroup
 var GLOBAL_Paths map[string]TypedGroup
+var GLOBAL_PtpPaths map[string]TypedGroup
 
 type Point struct {
 	X, Y, Z        float64
 	AllowDuplicate bool
+	Type           ObjectType
 }
 
 func GetPositionGeneric(m map[string]any) (float64, float64, float64, error) {
@@ -104,17 +106,26 @@ func (src Point) Barrier(dst Point) bool {
 			log.Println("Unsupported barrier")
 			return false
 		}
-		if b.Type == BT_DownOnly && dst.Y < src.Y {
+		barrierType := b._points[0].Type
+		//if dst is lower than source, skip downonly barriers
+		if barrierType == BT_DownOnly && dst.Y < src.Y {
 			continue
 		}
-		if doIntersect(src, dst, b.First(), b.Last()) {
-			return true
+		if barrierType == BT_Wall || barrierType == BT_DownOnly {
+			if doIntersect(src, dst, b.First(), b.Last()) {
+				return true
+			}
 		}
 	}
 	return false
 }
 
 func (src Point) CalcDistance(dst Point) float64 {
+	if src.Type.IsMushroom() {
+		return mushroomCost
+	} else if src.Type.IsWaypoint() {
+		return waypointCost
+	}
 	diffX := dst.X - src.X
 	diffY := dst.Y - src.Y
 	diffZ := dst.Z - src.Z
@@ -146,9 +157,15 @@ func (src Point) CalcDistance(dst Point) float64 {
 	//calculate Y Squared after punishments
 	diffYSq := diffY * diffY
 
-	return math.Sqrt(diffXSq + diffYSq + diffZSq)
+	dist := math.Sqrt(diffXSq + diffYSq + diffZSq)
+	if src.Type.IsLeyline() {
+		return dist * leylineScale
+	} else if src.Type.IsUpdraft() {
+		return dist * updraftScale
+	}
+	return dist
 }
-func (src Point) Distance(dst Point, allowWaypoints bool, bypassBarriers bool) float64 {
+func (src Point) Distance(dst Point, bypassBarriers bool) float64 {
 	var pathDistance float64
 	if src.Barrier(dst) {
 		if !bypassBarriers {
@@ -162,16 +179,6 @@ func (src Point) Distance(dst Point, allowWaypoints bool, bypassBarriers bool) f
 	}
 
 	pathDistance = pathDistance + src.CalcDistance(dst)
-
-	//check if waypointing is faster
-	if allowWaypoints && enableWaypointing {
-		for _, w := range GLOBAL_Waypoints {
-			waypointDistance := waypointCost + w.Distance(dst, false, false)
-			if waypointDistance < pathDistance {
-				return waypointDistance
-			}
-		}
-	}
 
 	return pathDistance
 }
@@ -201,7 +208,11 @@ func (src Point) PathTo(dst Point, usedPaths []TypedGroup) ([]TypedGroup, bool) 
 		if !path.IsOneway() && !start.Barrier(path.Last()) {
 			addChoice = true
 			if !path.First().Barrier(dst) {
-				possiblePaths = append(possiblePaths, append(usedPaths, path.Reverse()))
+				rev, err := path.Reverse()
+				if err != nil {
+					panic(err)
+				}
+				possiblePaths = append(possiblePaths, append(usedPaths, rev))
 			}
 		}
 
@@ -255,7 +266,7 @@ func cheapest(src, dst Point, groups [][]TypedGroup) []TypedGroup {
 
 func calculatePathCost(src, dst Point, group []TypedGroup) float64 {
 	total, newSrc := src.TakePath(group)
-	return total + newSrc.Distance(dst, false, false)
+	return total + newSrc.Distance(dst, false)
 }
 
 func (ls PointList) Contains(point Point) bool {

@@ -2,6 +2,7 @@ package location
 
 import (
 	"errors"
+	"math"
 	"slices"
 )
 
@@ -20,9 +21,11 @@ type GraphPath struct {
 	next    *GraphPath
 }
 type edge struct {
-	shortcuts []TypedGroup //optional non-direct path to reach node
-	cost      float64
-	dest      *graphNode
+	isWaypoint bool
+	direct     bool         // If true, "Shortcuts" MUST be a single path AND MUST contain at least 2 nodes
+	shortcuts  []TypedGroup //optional non-direct path to reach node
+	cost       float64
+	dest       *graphNode
 }
 type graphNode struct {
 	location Point
@@ -88,8 +91,14 @@ func (path *GraphPath) trySwapNext(target *GraphPath, alg algorithm) bool {
 	if alg == ALG_2p {
 		if middle != target {
 		} else {
-			fp := fullPath(middle, node2)
+			fp := fullPath(middle, node2) //NOTE: full path doesn't include node2
 			rev := fp.reverse()
+			if rev.length == 0 {
+				return false
+			}
+			if fp.length != rev.length {
+				panic("how can a reversed path have a different node count")
+			}
 			p1 = newPath(start, node1, &fp, node2, end)
 			p2 = newPath(start, node1, &rev, node2, end)
 		}
@@ -103,6 +112,9 @@ func (path *GraphPath) trySwapNext(target *GraphPath, alg algorithm) bool {
 			if rev.length == 0 {
 				return false
 			}
+			if fp.length != rev.length {
+				panic("how can a reversed path have a different node count")
+			}
 			p1 = newPath(start, node1, &fp, node2, end)
 			p2 = newPath(start, node2, &rev, node1, end)
 			if p2 == nil || p1 == nil {
@@ -111,7 +123,8 @@ func (path *GraphPath) trySwapNext(target *GraphPath, alg algorithm) bool {
 		}
 	}
 
-	if p1Dist, p2Dist := p1.EndDistance(), p2.EndDistance(); p2Dist < p1Dist {
+	//apply a slight fuzz to the calculation, so we doing get floating point errors with equivalent paths
+	if p1Dist, p2Dist := p1.EndDistance(), p2.EndDistance(); p2Dist+1e-5 < p1Dist {
 		if end != nil && end.next != nil {
 			tmp := p2
 			for tmp.next != nil {
@@ -254,20 +267,33 @@ func (p *graphNode) findEdge(dst *graphNode) (edge, error) {
 	}
 	return edge{}, errors.New("expected edge")
 }
-func (p *GraphPath) ToPath() Path {
-	out := Path{p.node.location}
+func (p *GraphPath) ToPath() (outputList []Path) {
+	outputList = make([]Path, 0)
+	work := Path{p.node.location}
+	defer func() {
+		outputList = append(outputList, work)
+	}()
+
 	for p.next != nil {
 		edge, err := p.node.findEdge(p.next.node)
 		if err != nil {
-			return out
+			return
 		}
-		for _, st := range edge.shortcuts {
-			out = append(out, st._points...)
+
+		if edge.isWaypoint {
+			outputList = append(outputList, work)
+			work = Path{edge.shortcuts[0]._points[1]}
+		} else if edge.direct {
+			work = append(work, edge.shortcuts[0]._points[1:len(edge.shortcuts[0]._points)-1]...)
+		} else {
+			for _, st := range edge.shortcuts {
+				work = append(work, st._points...)
+			}
 		}
-		out = append(out, p.next.node.location)
+		work = append(work, p.next.node.location)
 		p = p.next
 	}
-	return out
+	return
 }
 func (p *GraphPath) distanceTo(n *graphNode) float64 {
 	for _, edge := range p.node.edges {
@@ -358,7 +384,7 @@ func (p Path) optimizeAlg(p3 bool, bypassBarriers bool) bool {
 	return done
 }
 
-func (t TypedGroup) Reverse() TypedGroup {
+func (t TypedGroup) Reverse() (TypedGroup, error) {
 	rev := make([]Point, len(t._points))
 	copy(rev, t._points)
 	slices.Reverse(rev)
@@ -366,14 +392,15 @@ func (t TypedGroup) Reverse() TypedGroup {
 	dist := t._distance
 	revDist := t._revDistance
 
+	if t.IsOneway() {
+		return TypedGroup{}, errors.New("path cannot be reversed")
+	}
 	return TypedGroup{
 		Name:         t.Name,
-		ReverseName:  t.ReverseName,
-		Type:         t.Type,
 		_points:      rev,
 		_distance:    revDist,
 		_revDistance: dist,
-	}
+	}, nil
 }
 
 func (g Graph) requiredNodes() []*graphNode {
@@ -411,6 +438,74 @@ func (n *graphNode) closest(required []*graphNode) *graphNode {
 }
 
 func (node1 *graphNode) connect(node2 *graphNode) {
+	node1WaypointPath := TypedGroup{_distance: math.MaxFloat64}
+	node2WaypointPath := TypedGroup{_distance: math.MaxFloat64}
+	for _, wp := range GLOBAL_Waypoints {
+		tmp := node1.location
+		tmp.Type = GT_Waypoint
+		node1Path := NewGroup("WP", tmp)
+		node1Path.AddPoint(wp)
+		node1Path.AddPoint(node2.location)
+
+		tmp = node2.location
+		tmp.Type = GT_Waypoint
+		node2Path := NewGroup("WP", tmp)
+		node2Path.AddPoint(wp)
+		node2Path.AddPoint(node1.location)
+		if node1Path.Distance() < node1WaypointPath.Distance() {
+			node1WaypointPath = node1Path
+		}
+		if node2Path.Distance() < node2WaypointPath.Distance() {
+			node2WaypointPath = node2Path
+		}
+	}
+	n1Edge := edge{
+		dest:       node2,
+		cost:       node1WaypointPath.Distance(),
+		shortcuts:  []TypedGroup{node1WaypointPath},
+		direct:     true,
+		isWaypoint: true,
+	}
+	n2Edge := edge{
+		dest:       node1,
+		cost:       node2WaypointPath.Distance(),
+		shortcuts:  []TypedGroup{node2WaypointPath},
+		direct:     true,
+		isWaypoint: true,
+	}
+
+	for _, p := range GLOBAL_PtpPaths {
+		if node1.location.Same(p.First()) && node2.location.Same(p.Last()) {
+			if node1WaypointPath.Distance() < p.Distance() {
+				node1.edges = append(node1.edges, n1Edge)
+			} else {
+				node1.edges = append(node1.edges,
+					edge{
+						dest:      node2,
+						cost:      p.Distance(),
+						shortcuts: []TypedGroup{p},
+						direct:    true,
+					})
+			}
+			return
+		}
+
+		if node2.location.Same(p.First()) && node1.location.Same(p.Last()) {
+			ptpPath := []TypedGroup{p}
+			if node2WaypointPath.Distance() < p.Distance() {
+				node2.edges = append(node2.edges, n2Edge)
+			} else {
+				toDistance := findPathDistance(node2.location, ptpPath, node1.location)
+				node2.edges = append(node2.edges,
+					edge{
+						dest:      node1,
+						cost:      toDistance,
+						shortcuts: ptpPath,
+					})
+				return
+			}
+		}
+	}
 	const MAX_PATH_LENGTH = 10000
 
 	// find any possible paths to the node
@@ -418,46 +513,45 @@ func (node1 *graphNode) connect(node2 *graphNode) {
 	fromPath, _ := node2.location.FindPath(node1.location)
 	toDistance := findPathDistance(node1.location, toPath, node2.location)
 	fromDistance := findPathDistance(node2.location, fromPath, node1.location)
-	toDirectDistance := node1.location.Distance(node2.location, false, false)
-	fromDirectDistance := node2.location.Distance(node1.location, false, false)
+	toDirectDistance := node1.location.Distance(node2.location, false)
+	fromDirectDistance := node2.location.Distance(node1.location, false)
 
+	var toEdge, fromEdge *edge
 	if toDirectDistance < toDistance {
 		if toDirectDistance < MAX_PATH_LENGTH {
-			node1.edges = append(node1.edges,
-				edge{
-					dest: node2,
-					cost: toDirectDistance,
-				})
+			toEdge = &edge{dest: node2, cost: toDirectDistance}
 		}
 	} else {
 		if toDistance < MAX_PATH_LENGTH {
-			node1.edges = append(node1.edges,
-				edge{
-					dest:      node2,
-					cost:      toDistance,
-					shortcuts: toPath,
-				})
+			toEdge = &edge{dest: node2, cost: toDistance, shortcuts: toPath}
 		}
 	}
 
 	//Node 2 to node 1
 	if fromDirectDistance < fromDistance {
 		if fromDirectDistance < MAX_PATH_LENGTH {
-			node2.edges = append(node2.edges,
-				edge{
-					dest: node1,
-					cost: fromDirectDistance,
-				})
+			fromEdge = &edge{dest: node1, cost: fromDirectDistance}
 		}
 	} else {
 		if fromDistance < MAX_PATH_LENGTH {
-			node2.edges = append(node2.edges,
-				edge{
-					dest:      node1,
-					cost:      fromDistance,
-					shortcuts: fromPath,
-				})
+			fromEdge = &edge{dest: node1, cost: fromDistance, shortcuts: fromPath}
 		}
+	}
+
+	if toEdge == nil || n1Edge.cost < toEdge.cost {
+		toEdge = &n1Edge
+	}
+
+	if toEdge != nil {
+		node1.edges = append(node1.edges, *toEdge)
+	}
+
+	if fromEdge == nil || n2Edge.cost < fromEdge.cost {
+		fromEdge = &n2Edge
+	}
+
+	if fromEdge != nil {
+		node2.edges = append(node2.edges, *fromEdge)
 	}
 }
 func (g *Graph) add(pt Point, required bool, endNode bool) *graphNode {
@@ -501,7 +595,7 @@ func remove(ls []*graphNode, node *graphNode) []*graphNode {
 func (p Path) Distance(allowWaypoints bool, bypassBarriers bool) float64 {
 	var out float64
 	for i := 0; i < len(p)-1; i++ {
-		out += p[i].Distance(p[i+1], allowWaypoints, bypassBarriers)
+		out += p[i].Distance(p[i+1], bypassBarriers)
 	}
 	return out
 }
@@ -517,16 +611,16 @@ func (p Path) trySwap3p(i, j int, bypasBarriers bool) bool {
 	//Remove segments
 	for r := i - 1; r < j+1; r++ {
 		if r+1 < len(p) {
-			delta -= p[r].Distance(p[r+1], true, bypasBarriers)
+			delta -= p[r].Distance(p[r+1], bypasBarriers)
 		}
 	}
 
-	delta += p[i-1].Distance(p[j], true, bypasBarriers)
+	delta += p[i-1].Distance(p[j], bypasBarriers)
 	if j+1 < len(p) {
-		delta += p[first].Distance(p[j+1], true, bypasBarriers)
+		delta += p[first].Distance(p[j+1], bypasBarriers)
 	}
 	for r := j; r > i-1; r-- {
-		delta += p[r].Distance(p[r-1], false, bypasBarriers) //don't allow waypoints when following paths
+		delta += p[r].Distance(p[r-1], bypasBarriers) //don't allow waypoints when following paths
 	}
 
 	if delta < 0 {

@@ -10,8 +10,10 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var forceRecompile bool = false
@@ -64,12 +66,14 @@ func compileAutoPaths(srcPath string) error {
 	mapsPath := fmt.Sprintf("%s/%s/", srcPath, files.MapsDirectory)
 
 	for _, f := range fileList {
-		dstPath := dstRoot + strings.TrimPrefix(f, filesPath)
-		baseDstPath := strings.TrimSuffix(dstPath, files.AutoTrailExtension)
-		dstPath = baseDstPath + files.TrailExtension
+		filePrefix := strings.TrimSuffix(strings.TrimPrefix(f, filesPath), files.AutoTrailExtension)
+		tmp := dstRoot + filePrefix
+		filePrefix = path.Base(filePrefix)
+		baseDstPath := path.Dir(tmp)
+		templateOutputFileName := fmt.Sprintf("%s/%s", baseDstPath, filePrefix)
 
-		dstFileInfo, err := os.Stat(dstPath)
-		checkCompileTime := err == nil
+		oldestTime := files.OldestModified(baseDstPath, filePrefix, files.TrailExtension)
+		checkCompileTime := oldestTime != time.Time{}
 
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -99,10 +103,12 @@ func compileAutoPaths(srcPath string) error {
 		barrierFile := fmt.Sprintf("%s/%s", mapPath, files.BarriersFile)
 		waypointsFile := fmt.Sprintf("%s/%s", mapPath, files.WaypointsFile)
 		pathsFile := fmt.Sprintf("%s/%s", mapPath, files.PathsFile)
+		ptpPathsFile := fmt.Sprintf("%s/%s", mapPath, files.PtpPathsFile)
 
 		barriers := files.ReadTypedGroup(barrierFile)
 		waypoints := files.ReadPoints(waypointsFile)
 		paths := files.ReadTypedGroup(pathsFile)
+		ptpPaths := files.ReadPTPPoints(ptpPathsFile)
 		var pois []location.Point = []location.Point{}
 		for _, f := range fileLs {
 			poiFile := fmt.Sprintf("%s/%s", mapPath, f)
@@ -118,13 +124,13 @@ func compileAutoPaths(srcPath string) error {
 		}
 
 		if checkCompileTime {
-			lastCompile := dstFileInfo.ModTime()
+			lastCompile := oldestTime
 			if !forceRecompile {
 				changed := false
-				if files.FileChangedSince(lastCompile, dstPath) ||
-					files.FileChangedSince(lastCompile, barrierFile) ||
+				if files.FileChangedSince(lastCompile, barrierFile) ||
 					files.FileChangedSince(lastCompile, waypointsFile) ||
-					files.FileChangedSince(lastCompile, pathsFile) {
+					files.FileChangedSince(lastCompile, pathsFile) ||
+					files.FileChangedSince(lastCompile, ptpPathsFile) {
 					changed = true
 				}
 				for _, f := range fileLs {
@@ -140,8 +146,9 @@ func compileAutoPaths(srcPath string) error {
 			}
 		}
 
-		os.MkdirAll(filepath.Dir(dstPath), fs.ModePerm)
-		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, baseDstPath, files.TrailExtension)
+		files.RemoveWithExtension(baseDstPath, filePrefix, files.TrailExtension)
+		os.MkdirAll(dstRoot, fs.ModePerm)
+		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, ptpPaths, templateOutputFileName, files.TrailExtension)
 		if err != nil {
 			log.Printf("Error saving compiled resource: %s, Error: %s", f, err.Error())
 			continue

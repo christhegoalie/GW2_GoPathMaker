@@ -2,6 +2,7 @@ package files
 
 import (
 	"encoding/xml"
+	"fmt"
 	"gw2_markers_gen/blish"
 	"gw2_markers_gen/location"
 	"gw2_markers_gen/utils"
@@ -25,7 +26,7 @@ func ReadPoints(filePath string) []location.Point {
 		x, y, z, e := location.GetPosition(vals)
 		if e != nil {
 			if i > 0 {
-				log.Println("Unknown line: ", e.Error())
+				log.Printf("[%s] Unknown line: ", filePath, e.Error())
 			}
 			continue
 		}
@@ -68,7 +69,7 @@ func ReadPoiPoints(filePath string) []blish.Poi {
 		x, y, z, e := location.GetPosition(vals)
 		if e != nil {
 			if i > 0 {
-				log.Println("Unknown line: ", e.Error())
+				log.Printf("[%s] Unknown line: ", filePath, e.Error())
 			}
 			continue
 		}
@@ -99,6 +100,85 @@ func ReadXMLPoints(filePath string) []blish.Poi {
 	return pois.Pois.Poi
 }
 
+func hasPrefix(in []byte, prefix []byte) bool {
+	if len(prefix) > len(in) {
+		return false
+	}
+	for i := range prefix {
+		if prefix[i] != in[i] {
+			return false
+		}
+	}
+	return true
+}
+func firstIndex(in []byte, expected []byte) int {
+	var i int
+	for len(in[i:]) >= len(expected) {
+		if hasPrefix(in[i:], expected) {
+			return i
+		}
+		i++
+	}
+	return -1
+}
+func nextPtp(in []byte) ([]byte, []byte, bool) {
+	beginBytes := []byte("Begin")
+	endBytes := []byte("End")
+	beginIndex := firstIndex(in, beginBytes)
+	if beginIndex < 0 {
+		return []byte{}, []byte{}, false
+	}
+	endIndex := firstIndex(in[beginIndex:], endBytes)
+	if endIndex < 0 {
+		return []byte{}, []byte{}, false
+	}
+	endIndex += beginIndex
+	return in[beginIndex+len(beginBytes) : endIndex], in[endIndex+len(endBytes):], true
+}
+func ReadPTPPoints(filePath string) map[string]location.TypedGroup {
+	out := make(map[string]location.TypedGroup)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Println(err)
+	}
+
+	i := 0
+	for {
+		i++
+		key := fmt.Sprintf("%d", i)
+		path := location.NewEmptyGroup(key, location.Type_Unknown)
+		pathBytes, more, ok := nextPtp(data)
+		if !ok {
+			break
+		}
+		data = more
+
+		for i, s := range strings.Split(string(pathBytes), "\n") {
+			s = utils.Trim(s)
+			if s == "" {
+				continue
+			}
+			vals := utils.ReadMap(s, ' ')
+			x, y, z, e := location.GetPosition(vals)
+			if e != nil {
+				if i > 0 {
+					log.Printf("[%s] Unknown line: ", filePath, e.Error())
+				}
+				continue
+			}
+
+			p := location.Point{X: x, Y: y, Z: z, AllowDuplicate: false, Type: location.TypeFromMap(vals)}
+			path.AddPoint(p)
+		}
+
+		if len(path.Points()) > 0 {
+			out[key] = path
+		}
+
+	}
+	return out
+}
 func ReadTypedGroup(filePath string) map[string]location.TypedGroup {
 	out := make(map[string]location.TypedGroup)
 	data, err := os.ReadFile(filePath)
@@ -115,28 +195,16 @@ func ReadTypedGroup(filePath string) map[string]location.TypedGroup {
 		vals := utils.ReadMap(s, ' ')
 		x, y, z, e := location.GetPosition(vals)
 		if e != nil {
-			log.Println("Unknown line: ", e.Error())
+			log.Printf("[%s] Unknown line: ", filePath, e.Error())
 			continue
 		}
-		pt := location.Point{X: x, Y: y, Z: z}
+		pt := location.Point{X: x, Y: y, Z: z, Type: location.TypeFromMap(vals)}
 		if name, ok := utils.MapString(vals, "name"); ok {
 			if v, ok := out[name]; ok {
 				v.AddPoint(pt)
 				out[name] = v
 			} else {
-				v := location.NewGroup(name, pt, location.Type_Unknown)
-				if typeString, ok := utils.MapString(vals, "type"); ok {
-					switch strings.ToLower(typeString) {
-					case "downonly":
-						v.Type = location.BT_DownOnly
-					case "wall":
-						v.Type = location.BT_Wall
-					case "mushroom":
-						v.Type = location.GT_Mushroom
-					case "oneway":
-						v.Type = location.GT_ONEWAY
-					}
-				}
+				v := location.NewGroup(name, pt)
 				out[name] = v
 			}
 		} else {

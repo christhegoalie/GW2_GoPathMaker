@@ -30,6 +30,7 @@ const BarriersFile = "barriers.txt"
 const WaypointsFile = "waypoints.txt"
 const PathsFile = "paths.txt"
 const MapInfoFile = "mapinfo.txt"
+const PtpPathsFile = "edges.txt"
 
 // Export files
 const OutputCategoryFile = "_markerCategories.xml"
@@ -98,4 +99,30 @@ func FileChangedSince(timestamp time.Time, filePath string) bool {
 		return true
 	}
 	return info.ModTime().After(timestamp)
+}
+
+func OldestModified(srcDir string, prefix string, suffix string) time.Time {
+	var first bool = true
+	files := FilesWithPrefixSuffix(srcDir, prefix, suffix)
+	var out time.Time
+	for _, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			panic(err)
+		}
+		if first || info.ModTime().Before(out) {
+			first = false
+			out = info.ModTime()
+		}
+	}
+	return out
+}
+func RemoveWithExtension(srcDir string, prefix, suffix string) {
+	files := FilesWithPrefixSuffix(srcDir, prefix, suffix)
+	for _, f := range files {
+		e := os.Remove(f)
+		if e != nil {
+			panic(e)
+		}
+	}
 }

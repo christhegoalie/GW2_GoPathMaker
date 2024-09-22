@@ -9,8 +9,17 @@ import (
 	"sync"
 )
 
-func SaveShortestTrail(mapid int, waypoints []location.Point, pois []location.Point, barriers map[string]location.TypedGroup, paths map[string]location.TypedGroup, baseFileName string, extension string) error {
-	location.SetGlobals(barriers, paths, waypoints)
+func SaveShortestTrail(
+	mapid int,
+	waypoints []location.Point,
+	pois []location.Point,
+	barriers map[string]location.TypedGroup,
+	paths map[string]location.TypedGroup,
+	ptpPaths map[string]location.TypedGroup,
+	baseFileName string,
+	extension string) error {
+
+	location.SetGlobals(barriers, paths, waypoints, ptpPaths)
 	defer location.ResetGlobals()
 
 	g := location.Path(pois).ToGraph()
@@ -34,18 +43,20 @@ func SaveShortestTrail(mapid int, waypoints []location.Point, pois []location.Po
 	wg.Wait()
 
 	final, _ := pathList.Shortest()
-	points := final.ToPath()
+	outputPaths := final.ToPath()
 
-	b, err := PointsToTrlBytes(mapid, points)
-	if err != nil {
-		return err
-	}
+	for i, points := range outputPaths {
+		b, err := PointsToTrlBytes(mapid, points)
+		if err != nil {
+			return err
+		}
 
-	fileName := fmt.Sprintf("%s%s", baseFileName, extension)
-	log.Printf("Generating file: %s", baseFileName)
-	err = os.WriteFile(fileName, b, fs.ModePerm)
-	if err != nil {
-		return err
+		fileName := fmt.Sprintf("%s_%d%s", baseFileName, i+1, extension)
+		log.Printf("Generating file: %s", fileName)
+		err = os.WriteFile(fileName, b, fs.ModePerm)
+		if err != nil {
+			return err
+		}
 	}
 
 	/*
@@ -61,8 +72,10 @@ func SaveShortestTrail(mapid int, waypoints []location.Point, pois []location.Po
 	*/
 	return nil
 }
-func SaveShortestTrailWithZones(mapid int, waypoints []location.Point, srcPoints []location.Point, zoneTrail ZoneTrail, barriers map[string]location.TypedGroup, paths map[string]location.TypedGroup, baseFileName string, extension string) error {
-	location.SetGlobals(barriers, paths, waypoints)
+
+/*
+func SaveShortestTrailWithZones(mapid int, waypoints []location.Point, srcPoints []location.Point, zoneTrail ZoneTrail, barriers map[string]location.TypedGroup, paths map[string]location.TypedGroup, ptpPaths map[string]location.TypedGroup, baseFileName string, extension string) error {
+	location.SetGlobals(barriers, paths, waypoints, ptpPaths)
 	defer location.ResetGlobals()
 
 	regions := zoneTrail.PartitionPoints(srcPoints)
@@ -161,3 +174,4 @@ func SaveShortestTrailWithZones(mapid int, waypoints []location.Point, srcPoints
 	}
 	return nil
 }
+*/
