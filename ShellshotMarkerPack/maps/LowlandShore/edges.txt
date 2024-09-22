@@ -373,7 +373,7 @@ xpos="856.5878" ypos="369.5743" zpos="-203.5681"
 End
 Begin
 xpos="623.4208" ypos="304.7628" zpos="-284.686"
-xpos="464.5027" ypos="340.1122" zpos="-424.2298" type=mushroom
+xpos="464.5027" ypos="340.1122" zpos="-424.2298" type="mushroom"
 xpos="484.9975" ypos="408.3109" zpos="-451.3438"
 xpos="469.1414" ypos="386.4829" zpos="-382.5421"
 End
@@ -447,7 +447,7 @@ End
 Begin
 xpos="179.0638" ypos="213.3876" zpos="215.1247"
 xpos="79.42278" ypos="214.5502" zpos="303.6004"
-xpos="60.60839" ypos="129.6664" zpos="316.5809" type=mushroom
+xpos="60.60839" ypos="129.6664" zpos="316.5809" type="mushroom"
 xpos="5.657083" ypos="148.9832" zpos="290.7152"
 xpos="-25.45775" ypos="150.3148" zpos="289.7129"
 xpos="-130.1442" ypos="130.7041" zpos="317.7775"
@@ -529,7 +529,7 @@ xpos="-391.8101" ypos="7.458445" zpos="35.22545"
 End
 Begin
 xpos="-653.728" ypos="96.19167" zpos="229.7455"
-xpos="-740.6395" ypos="110.2904" zpos="234.2162" type=leyline
+xpos="-740.6395" ypos="110.2904" zpos="234.2162" type="leyline"
 xpos="-782.5572" ypos="175.7188" zpos="100.3328"
 xpos="-829.9568" ypos="206.5672" zpos="45.83117"
 End

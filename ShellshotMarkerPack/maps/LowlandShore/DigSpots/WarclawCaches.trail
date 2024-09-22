@@ -1,2 +1,5 @@
 category=ShellshotMarkerPack.Janthir.DigSpots.WarclawPath
-trailData="assets/trails/janthir_lowlands/warclawcaches.trl" color="6e6ea3ff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000" GUID="70PLNYlrTLm3/DEsm5wwsQ=="
+trailData="assets/trails/janthir_lowlands/warclawcaches_1.trl" color="6e6ea3ff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000" GUID="70PLNYlrTLm3/DEsm5wwsQ=="
+trailData="assets/trails/janthir_lowlands/warclawcaches_2.trl" color="6e6ea3ff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"  GUID="w4xFjpx6SQyMBifTvUQoCg=="
+trailData="assets/trails/janthir_lowlands/warclawcaches_3.trl" color="6e6ea3ff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"  GUID="ebCi2EjeQNiaJJ//xqZROA=="
+trailData="assets/trails/janthir_lowlands/warclawcaches_4.trl" color="6e6ea3ff" animSpeed="1" alpha="1" fadeNear="3000" fadeFar="4000"  GUID="qF4wNyEGTiapf5ix+Atfyw=="
