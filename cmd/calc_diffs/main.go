@@ -14,10 +14,11 @@ import (
 )
 
 const janthir_files_local = "files1_syntri"
-const janthir_files_remote = "files2_syntri"
 const lowland_files_local = "files1_lowlands"
-const lowland_files_remote = "files2_lowlands"
-const remote_target_type = ""
+const remote_target_type = "HDPACK.achievo.sniff.SS"
+
+var syntri_files_remote string = "remote_syntri"
+var lowland_files_remote string = "remote_lowlands"
 
 type exec struct {
 	src1Path    string
@@ -38,9 +39,9 @@ func main() {
 		},
 		{
 			src1Path:    janthir_files_local,
-			src2Path:    janthir_files_remote,
+			src2Path:    syntri_files_remote,
 			diff1Output: fmt.Sprintf("missing_%s.json", janthir_files_local),
-			diff2Output: fmt.Sprintf("missing_%s.xml", janthir_files_remote),
+			diff2Output: fmt.Sprintf("missing_%s.xml", syntri_files_remote),
 		},
 	}
 	for _, ex := range execs {
