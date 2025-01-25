@@ -95,6 +95,9 @@
 - Every marker line MAY overwrite marker attributes
 - Example Line: `trailData="assets/trails/janthir_lowlands/honeybey_jp.trl" color="ffffffff"`
 #### .rtrl file format
+- File specifies a list of POIs that should be visisted in order
+- Path starts from the first POI in the file
+- POIs in the file will be visisted in order
 - All Lines MUST be a list of Key/Value Pairs seperated by the space character
 - Key/Values MUST be seperated by the `=` sign
 - Line 1 MUST contain the `mapid` key (and other keys will be ignored)
@@ -102,10 +105,13 @@
 - All Other Keys are ignored
 - Lines without position information are skipped
 #### .atrl file format
+- File species auto-generation of an optimized path starting from any waypoint, and visisting all nodes
+- order of POIs in the trail is NOT guaranteed in the final path
 - Every line defines a key/value pair describing map information
 - Key/Value MUST be separated by the `=` sign
 - The file MUST contain the `map` key
 - the file MUST contain a `file` key
+- the file MAY contain a `fromWaypoint` key indicating path generation should start from a map waypoint
 - All Other Keys are ignored
 - Lines without position information are skipped
 - The `map` value MUST match the name of a directory in your `maps` folder
