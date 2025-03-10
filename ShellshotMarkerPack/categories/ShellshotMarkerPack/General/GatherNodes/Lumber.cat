@@ -1,0 +1,8 @@
+iconsize="0.5" 
+behavior="6" 
+fadenear="5000" 
+fadefar="5100" 
+heightoffset="2.5" 
+minsize="10"
+mapdisplaysize="30"
+iconfile="assets\icons\general\Lumber.png"

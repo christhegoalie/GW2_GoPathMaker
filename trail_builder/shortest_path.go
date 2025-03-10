@@ -1,6 +1,7 @@
 package trailbuilder
 
 import (
+	"errors"
 	"fmt"
 	"gw2_markers_gen/location"
 	"io/fs"
@@ -25,6 +26,10 @@ func SaveShortestTrail(
 	g := location.Path(pois).ToGraph()
 	g.AddWaypoints(waypoints)
 	pathList := g.GetPaths()
+
+	if len(waypoints) == 0 {
+		return errors.New("no starting waypoints found")
+	}
 
 	wg := sync.WaitGroup{}
 	log.Printf("Optimizing Map: %d", mapid)

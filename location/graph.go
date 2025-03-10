@@ -160,7 +160,7 @@ func (path *GraphPath) length() int {
 	return len
 }
 func (path *GraphPath) Optimize(bindEnd bool) bool {
-	if path == nil || path.next == nil {
+	if path == nil || path.next == nil || path.next.next == nil {
 		return false
 	}
 

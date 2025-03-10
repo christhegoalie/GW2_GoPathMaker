@@ -147,7 +147,7 @@ func compileAutoPaths(srcPath string) error {
 		}
 
 		files.RemoveWithExtension(baseDstPath, filePrefix, files.TrailExtension)
-		os.MkdirAll(dstRoot, fs.ModePerm)
+		os.MkdirAll(filepath.Dir(templateOutputFileName), fs.ModePerm)
 		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, ptpPaths, templateOutputFileName, files.TrailExtension)
 		if err != nil {
 			log.Printf("Error saving compiled resource: %s, Error: %s", f, err.Error())
