@@ -125,6 +125,8 @@ func (src Point) CalcDistance(dst Point) float64 {
 		return mushroomCost
 	} else if src.Type.IsWaypoint() {
 		return waypointCost
+	} else if src.Type.IsGeyser() {
+		return geyserCost
 	}
 	diffX := dst.X - src.X
 	diffY := dst.Y - src.Y

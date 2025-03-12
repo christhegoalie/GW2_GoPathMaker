@@ -10,6 +10,7 @@ type ObjectType int
 // Arbitrarily high value, but we need to be able to compute the "better" of paths crossing multiple barriers
 const BarrierValue = 1e7
 const waypointCost = 5000
+const geyserCost = 0.2
 const mushroomCost = 10
 const leylineScale = 0.4
 const updraftScale = 0.2
@@ -24,6 +25,7 @@ const (
 	GT_ONEWAY
 	GT_Updraft
 	GT_Waypoint
+	GT_Geyser
 )
 
 type TypedGroup struct {
@@ -48,7 +50,10 @@ func (t ObjectType) IsBarrier() bool {
 	return t == BT_DownOnly || t == BT_Wall
 }
 func (t ObjectType) IsOneway() bool {
-	return t == GT_ONEWAY || t.IsMushroom() || t.IsLeyline() || t.IsUpdraft() || t.IsWaypoint()
+	return t == GT_ONEWAY || t.IsMushroom() || t.IsLeyline() || t.IsUpdraft() || t.IsWaypoint() || t.IsGeyser()
+}
+func (t ObjectType) IsGeyser() bool {
+	return t == GT_Geyser
 }
 func (t ObjectType) IsMushroom() bool {
 	return t == GT_Mushroom
@@ -125,6 +130,8 @@ func TypeFromMap(vals map[string]any) ObjectType {
 			return GT_Updraft
 		case "waypoint":
 			return GT_Waypoint
+		case "geyser":
+			return GT_Geyser
 		}
 	}
 	return Type_Unknown
