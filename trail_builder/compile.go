@@ -93,6 +93,7 @@ func compileAutoPaths(srcPath string) error {
 			log.Printf("File name not specified: %s", f)
 			continue
 		}
+
 		mapName = utils.Trim(mapName)
 		mapPath := fmt.Sprintf("%s%s", mapsPath, mapName)
 		mapId, _, err := maps.ReadMapInfo(mapPath)
@@ -107,6 +108,19 @@ func compileAutoPaths(srcPath string) error {
 
 		barriers := files.ReadTypedGroup(barrierFile)
 		waypoints := files.ReadPoints(waypointsFile)
+		start_x, okX := utils.MapFloat(m, "start_xpos")
+		start_y, okY := utils.MapFloat(m, "start_ypos")
+		start_z, okZ := utils.MapFloat(m, "start_zpos")
+		if okX && okY && okZ {
+			waypoints = []location.Point{
+				{
+					X: start_x,
+					Y: start_y,
+					Z: start_z,
+				},
+			}
+		}
+
 		paths := files.ReadTypedGroup(pathsFile)
 		ptpPaths := files.ReadPTPPoints(ptpPathsFile)
 		var pois []location.Point = []location.Point{}

@@ -1,5 +1,3 @@
 map="Mistburned Barrens"
-file="GatherNodes/HerbNodes.poi" 
-file="GatherNodes/LumberNodes.poi" 
-file="GatherNodes/OreNodes.poi" 
-file="GatherNodes/TitanDust.poi" 
+file="GatherNodes/Obsidian.poi" 
+file="GatherNodes/Heatstone.poi" 
