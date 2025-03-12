@@ -18,6 +18,19 @@ func MapFloat(src map[string]any, key string) (float64, bool) {
 	}
 	return 0, false
 }
+func MapInt(src map[string]any, key string) (int, bool) {
+	if val, ok := src[key]; ok {
+		if v, ok := val.(string); ok {
+			if fv, err := strconv.ParseInt(v, 10, 32); err == nil {
+				return int(fv), true
+
+			}
+			return 0, false
+		}
+	}
+	return 0, false
+}
+
 func MapString(src map[string]any, key string) (string, bool) {
 	if val, ok := src[key]; ok {
 		if v, ok := val.(string); ok {
