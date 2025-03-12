@@ -2,9 +2,22 @@ package utils
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
+func MapFloat(src map[string]any, key string) (float64, bool) {
+	if val, ok := src[key]; ok {
+		if v, ok := val.(string); ok {
+			if fv, err := strconv.ParseFloat(v, 64); err == nil {
+				return fv, true
+
+			}
+			return 0, false
+		}
+	}
+	return 0, false
+}
 func MapString(src map[string]any, key string) (string, bool) {
 	if val, ok := src[key]; ok {
 		if v, ok := val.(string); ok {
