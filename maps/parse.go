@@ -44,9 +44,14 @@ func parsePoi(category string, line string) (POI, []string, error) {
 	if err != nil {
 		return POI{}, warns, fmt.Errorf("error in line: %s, error: %s", line, err.Error())
 	}
+	mId, ok := utils.MapInt(m, "mapId")
+	if !ok {
+		mId = 0
+	}
 	delete(m, "xpos")
 	delete(m, "ypos")
 	delete(m, "zpos")
+	delete(m, "mapId")
 	if cat, ok := utils.MapString(m, "category"); ok {
 		category = utils.Trim(cat)
 		delete(m, "category")
@@ -60,6 +65,7 @@ func parsePoi(category string, line string) (POI, []string, error) {
 
 	return POI{
 		CategoryReference: category,
+		OverwriteMap:      mId,
 		XPos:              x,
 		YPos:              y,
 		ZPos:              z,

@@ -28,6 +28,9 @@ func Save(maps []Map, path string) error {
 }
 
 func encodePoi(mapid int, p POI) string {
+	if p.OverwriteMap > 0 {
+		mapid = p.OverwriteMap
+	}
 	txt := strings.Builder{}
 	txt.WriteString(fmt.Sprintf(`<poi type="%s" xpos="%.6f" ypos="%.6f" zpos="%.6f" mapid="%d"`, p.CategoryReference, p.XPos, p.YPos, p.ZPos, mapid))
 	for key, val := range p.Keys {

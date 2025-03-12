@@ -5,4 +5,5 @@ type POI struct {
 	XPos, YPos, ZPos  float64
 	Keys              map[string]string
 	AllowDuplicate    bool
+	OverwriteMap      int
 }
