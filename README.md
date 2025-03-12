@@ -37,7 +37,7 @@
 1. Define categories using [Directory Structure](#categories-directory). Example: `XXXMarkerPack/categories/Janthir/Chests` generates the Category: `Janthir.Chests`
 1. Any edge category requiring configuration (including icons), may be defined using a [.cat](#cat-file-format) file instead
 1. Add your maps directory. `XXXMarkerPack/maps`
-1. Add a [map](#map-directory) you intend to add markers for: `XXXMarkerPack/maps/JanthirSyntri`
+1. Add a [map](#map-directory) you intend to add markers for. Example: `XXXMarkerPack/maps/JanthirSyntri`
 1. Create [mapinfo.txt](mapinfotxt-format) in your map directory containing the map id. EX: `id=1554` (Can be easily found using the "Marker Pack Assistant" module from blish)
 1. Create any number of [.poi](#poi-file-format) and [.trail](#trail-file-format) files containing marker location information. (any sub directory structure may be used)
 1. Generate your package zip file: `./gw2_markers_gen -n XXXMarkerPack`
