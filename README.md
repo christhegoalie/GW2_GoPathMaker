@@ -14,6 +14,11 @@
 1. Major Kodan Caches
 1. Charted Titan Ore Gather Nodes
 1. Rotten Titan Amber Gather Nodes
+- Mistburned Barrens
+1. Warclaw Caches [In progress]
+1. Ruins caches [In progress]
+1. Gather nodes [Heatstone, Obsidian]
+1. Event/Achievment locations
 
 # Building
 
@@ -84,6 +89,7 @@
 - Key/Value MUST be separated by the `=` sign
 - Every marker line MUST contain X,Y,Z position information (as copied using the "Marker Pack Assistant" module from blish)
 - Every marker line MAY overwrite marker attributes
+- Every marker line MAY overwrite the `mapId` property controlling the map the marker applies to
 - Example Line: `xpos="-290.0943" ypos="32.79265" zpos="-283.0596" Behavior="0"`
 #### .trail file format
 - Line 1 MUST reference a marker category present in your category directory. EX: `category=ShellshotMarkerPack.Janthir.GatherNodes.ChargedOre`
@@ -112,6 +118,7 @@
 - The file MUST contain the `map` key
 - the file MUST contain a `file` key
 - the file MAY contain a `fromWaypoint` key indicating path generation should start from a map waypoint
+- the file MAY contain the `start_xpos`, `start_ypox` and `start_zpos` keys. If all are specified, and have valid information, path generation will start from those coordinates rather than using waypoints
 - All Other Keys are ignored
 - Lines without position information are skipped
 - The `map` value MUST match the name of a directory in your `maps` folder
