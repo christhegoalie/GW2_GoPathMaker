@@ -2,6 +2,7 @@ package maps
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -23,6 +24,7 @@ func Save(maps []Map, path string) error {
 			f.WriteString(encodeTrail(m.MapId, t))
 		}
 		f.WriteString(`</pois></overlaydata>`)
+		log.Printf("Generated map: %s. Total POIs: %d, Total trails: %d", m.MapName, len(m.POIs), len(m.Trails))
 	}
 	return nil
 }
