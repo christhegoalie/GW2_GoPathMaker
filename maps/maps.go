@@ -3,6 +3,7 @@ package maps
 import (
 	"fmt"
 	"gw2_markers_gen/categories"
+	"gw2_markers_gen/utils"
 	"log"
 	"os"
 	"strings"
@@ -56,7 +57,7 @@ func getCategory(categoryList []categories.Category, line string) (string, strin
 		return "", fmt.Sprintf("Invalid category pair: %s", line), true
 	}
 
-	category := pair[1]
+	category := utils.Trim(pair[1])
 
 	for _, cat := range categoryList {
 		if cat.MatchString(category) {
