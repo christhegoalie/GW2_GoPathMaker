@@ -123,7 +123,7 @@ func (src Point) Barrier(dst Point) bool {
 func (src Point) CalcDistance(dst Point) float64 {
 	if src.Type.IsMushroom() {
 		return mushroomCost
-	} else if src.Type.IsWaypoint() {
+	} else if dst.Type.IsWaypoint() {
 		return waypointCost
 	} else if src.Type.IsGeyser() {
 		return geyserCost
