@@ -1,0 +1,4 @@
+xpos="863.0446" ypos="55.18018" zpos="-351.9242" name="west of spawn" type="wall"
+xpos="723.0054" ypos="12.35094" zpos="-456.7076" name="west of spawn" type="wall"
+xpos="723.0054" ypos="12.35094" zpos="-456.7076" name="sw of spawn" type="wall"
+xpos="807.2459" ypos="2.47454" zpos="-457.7892" name="sw of spawn" type="wall"

@@ -1,0 +1,5 @@
+
+xpos="815.5872" ypos="0.8433323" zpos="-452.9562" name="path from spawn 1"
+xpos="787.2581" ypos="2.003143" zpos="-481.7609" name="path from spawn 1"
+xpos="726.8538" ypos="2.834134" zpos="-483.0523" name="path from spawn 2"
+xpos="726.8538" ypos="2.834134" zpos="-483.0523" name="path from spawn 2"

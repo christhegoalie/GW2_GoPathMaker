@@ -1,0 +1,12 @@
+category=ShellshotMarkerPack.VOE.Achievments.MagicalJourney
+xpos="-132.3095" ypos="61.0841" zpos="-107.5674" [start npc]
+xpos="116.8901" ypos="2.370786" zpos="-226.6962" 
+xpos="156.0968" ypos="2.713383" zpos="-79.86112" 
+xpos="-737.4337" ypos="65.79108" zpos="-233.8567"
+xpos="872.2922" ypos="29.14437" zpos="-166.0061"
+xpos="200.9723" ypos="1.533425" zpos="-506.1459"
+xpos="-676.3756" ypos="81.6924" zpos="394.9157"
+xpos="43.83602" ypos="67.94665" zpos="-122.9281"
+xpos="-586.7315" ypos="77.62982" zpos="247.491"
+xpos="-132.3095" ypos="61.0841" zpos="-107.5674" [continue]
+xpos="-132.3095" ypos="61.0841" zpos="-107.5674" [finish]
