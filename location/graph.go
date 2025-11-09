@@ -34,6 +34,7 @@ type graphNode struct {
 }
 type Graph struct {
 	useEndpoint bool
+	maxValue    int
 	nodes       []*graphNode
 	waypoints   []*graphNode
 }
@@ -76,7 +77,35 @@ func edgeExists(node1 *graphNode, node2 *graphNode) bool {
 	return false
 }
 
-func (path *GraphPath) trySwapNext(target *GraphPath, alg algorithm) bool {
+func validateSubPath(path *GraphPath, currentValue int, maxValue int) bool {
+	cannotAppear := make(map[string]bool)
+	if path == nil {
+		return true
+	}
+
+	for p := path; p != nil; p = p.next {
+		tag := p.node.location.Tag
+		parent := p.node.location.ParentTag
+
+		currentValue = min(maxValue, currentValue-p.node.location.Cost)
+		if currentValue < 0 {
+			return false
+		}
+
+		// If this tag is in the cannotAppear set, dependency violated
+		if tag != "" && cannotAppear[tag] {
+			return false
+		}
+
+		// If this node has a parent, mark it as "cannot appear yet"
+		if parent != "" {
+			cannotAppear[parent] = true
+		}
+	}
+	return true
+}
+
+func (path *GraphPath) trySwapNext(target *GraphPath, alg algorithm, startingValue int, maxValue int) bool {
 	if path == nil || path.next == nil || target == nil {
 		return false
 	}
@@ -123,6 +152,10 @@ func (path *GraphPath) trySwapNext(target *GraphPath, alg algorithm) bool {
 		}
 	}
 
+	if !validateSubPath(p2, startingValue, maxValue) {
+		return false
+	}
+
 	//apply a slight fuzz to the calculation, so we doing get floating point errors with equivalent paths
 	if p1Dist, p2Dist := p1.EndDistance(), p2.EndDistance(); p2Dist+1e-5 < p1Dist {
 		if end != nil && end.next != nil {
@@ -159,11 +192,12 @@ func (path *GraphPath) length() int {
 	}
 	return len
 }
-func (path *GraphPath) Optimize(bindEnd bool) bool {
+func (path *GraphPath) Optimize(bindEnd bool, maxValue int) bool {
 	if path == nil || path.next == nil || path.next.next == nil {
 		return false
 	}
 
+	currentValue := 0
 	src := path
 	for {
 		target := src.next.next
@@ -174,17 +208,19 @@ func (path *GraphPath) Optimize(bindEnd bool) bool {
 			if bindEnd && target.next == nil {
 				break
 			}
-			if found := src.trySwapNext(target, ALG_4p); found {
+			if found := src.trySwapNext(target, ALG_4p, currentValue, maxValue); found {
 				return found
 			}
 			target = target.next
 		}
 		src = src.next
+		currentValue = min(maxValue, currentValue-src.node.location.Cost)
 		if src.next.next == nil {
 			break
 		}
 	}
 
+	currentValue = 0
 	src = path
 	for {
 		target := src.next.next
@@ -195,12 +231,13 @@ func (path *GraphPath) Optimize(bindEnd bool) bool {
 			if bindEnd && target.next == nil {
 				break
 			}
-			if found := src.trySwapNext(target, ALG_2p); found {
+			if found := src.trySwapNext(target, ALG_2p, currentValue, maxValue); found {
 				return true
 			}
 			target = target.next
 		}
 		src = src.next
+		currentValue = min(maxValue, currentValue-src.node.location.Cost)
 		if src.next.next == nil {
 			break
 		}
@@ -330,15 +367,27 @@ func (l graphPathList) Shortest() (*GraphPath, float64) {
 func (g *Graph) GetPaths() graphPathList {
 	out := make(graphPathList, len(g.waypoints))
 	for i, w := range g.waypoints {
+		currentValue := 0
+		visited := map[string]bool{}
 		current := &GraphPath{BindEnd: g.useEndpoint, node: w}
 		out[i] = current
+		if w.location.Tag != "" {
+			visited[w.location.Tag] = true
+		}
 		required := g.requiredNodes()
 		for len(required) > 0 {
-			node := current.node.closest(required)
+			node := current.node.closest_valid(required, visited, currentValue)
+			if node == nil {
+				break
+			}
 			required = remove(required, node)
 			newNode := &GraphPath{BindEnd: g.useEndpoint, node: node}
 			current.next = newNode
 			current = newNode
+			if node.location.Tag != "" {
+				visited[node.location.Tag] = true
+			}
+			currentValue = min(g.maxValue, currentValue-node.location.Cost)
 		}
 	}
 	return out
@@ -353,8 +402,8 @@ func (g *Graph) SetEndpoint(pt Point) {
 	g.useEndpoint = true
 	g.add(pt, true, true)
 }
-func (p Path) ToGraph() Graph {
-	g := Graph{}
+func (p Path) ToGraph(maxValue int) Graph {
+	g := Graph{maxValue: maxValue}
 	for _, node := range p {
 		g.add(node, true, false)
 	}
@@ -406,18 +455,22 @@ func (t TypedGroup) Reverse() (TypedGroup, error) {
 func (g Graph) requiredNodes() []*graphNode {
 	out := []*graphNode{}
 	for _, n := range g.nodes {
-		if n.required {
+		if n.required && !n.location.Skip {
 			out = append(out, n)
 		}
 	}
 	return out
 }
 
-func (n *graphNode) closest(required []*graphNode) *graphNode {
+func (n *graphNode) closest_valid(required []*graphNode, visitedMap map[string]bool, currentValue int) *graphNode {
 	var currentCost float64
 	var out *graphNode
 	for _, edge := range n.edges {
 		if !contains(required, edge.dest) {
+			continue
+		} else if edge.dest.location.ParentTag != "" && !visitedMap[edge.dest.location.ParentTag] {
+			continue
+		} else if currentValue-edge.dest.location.Cost < 0 {
 			continue
 		} else if out == nil {
 			out = edge.dest
@@ -431,9 +484,9 @@ func (n *graphNode) closest(required []*graphNode) *graphNode {
 	}
 
 	//Catch for valid edges to finish the path..let the otimizer fix things
-	if out == nil {
-		out = required[0]
-	}
+	//if out == nil {
+	//	out = required[0]
+	//}
 	return out
 }
 

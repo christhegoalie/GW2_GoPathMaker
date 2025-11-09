@@ -40,7 +40,7 @@ func parseTrail(category string, line string) (Trail, []string, error) {
 func parsePoi(category string, line string) (POI, []string, error) {
 	warns := []string{}
 	m := utils.ReadMap(line, ' ')
-	x, y, z, err := location.GetPosition(m)
+	point, err := location.GetPosition(m)
 	if err != nil {
 		return POI{}, warns, fmt.Errorf("error in line: %s, error: %s", line, err.Error())
 	}
@@ -66,9 +66,9 @@ func parsePoi(category string, line string) (POI, []string, error) {
 	return POI{
 		CategoryReference: category,
 		OverwriteMap:      mId,
-		XPos:              x,
-		YPos:              y,
-		ZPos:              z,
+		XPos:              point.X,
+		YPos:              point.Y,
+		ZPos:              point.Z,
 		AllowDuplicate:    allowDupe,
 		Keys:              utils.ToStringMap(m),
 	}, warns, nil

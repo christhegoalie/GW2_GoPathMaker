@@ -36,8 +36,8 @@
 1. Add your catagories directory. `XXXMarkerPack/categories`
 1. Define categories using [Directory Structure](#categories-directory). Example: `XXXMarkerPack/categories/Janthir/Chests` generates the Category: `Janthir.Chests`
 1. Any edge category requiring configuration (including icons), may be defined using a [.cat](#cat-file-format) file instead
-1. Add your maps directory. `XXXMarkerPack/maps`
-1. Add a [map](#map-directory) you intend to add markers for. Example: `XXXMarkerPack/maps/JanthirSyntri`
+1. Add your maps directory. `XXXMarkerPack/<group>/maps`
+1. Add a [map](#map-directory) you intend to add markers for. Example: `XXXMarkerPack/maps/Janthir/JanthirSyntri`
 1. Create [mapinfo.txt](mapinfotxt-format) in your map directory containing the map id. EX: `id=1554` (Can be easily found using the "Marker Pack Assistant" module from blish)
 1. Create any number of [.poi](#poi-file-format) and [.trail](#trail-file-format) files containing marker location information. (any sub directory structure may be used)
 1. Generate your package zip file: `./gw2_markers_gen -n XXXMarkerPack`
@@ -46,7 +46,7 @@
 ### Directory Structure
 #### `maps` directory
 - Location for storing map information
-- Every directory under the maps directory MUST definte a map [see description below]
+- Every directory 2 levels deep under the maps directory MUST definte a map [see description below]
 #### `map` directory
 - No Directory structure is required
 - The root or subdirectory MAY contain any number of [.poi](#poi-file-format) files
@@ -90,6 +90,9 @@
 - Every marker line MUST contain X,Y,Z position information (as copied using the "Marker Pack Assistant" module from blish)
 - Every marker line MAY overwrite marker attributes
 - Every marker line MAY overwrite the `mapId` property controlling the map the marker applies to
+- Every marker line MAY contain a `tag` property. Used for identifying the POI during trail generation.
+- Every marker line MAY contain a `parent` property. Used for indicating ownership `tag` during trail generation. (A parent must be visited before any children)
+- Every marker line MAY contain a `cost` property. This value may be negative for adding value, or positive for decreasing. This value is used during path generation: Negative cost paths are disallowed.
 - Example Line: `xpos="-290.0943" ypos="32.79265" zpos="-283.0596" Behavior="0"`
 #### .trail file format
 - Line 1 MUST reference a marker category present in your category directory. EX: `category=ShellshotMarkerPack.Janthir.GatherNodes.ChargedOre`
@@ -132,6 +135,7 @@
 - Every line defines a key/value pair describing map information
 - Key/Value MUST be separated by the `=` sign
 - The file MUST contain the `id` key
+- The file MAY contain the `max_value` key. Used for defining resource limitations during path generation.
 - All other information in the file will be skipped
 #### barriers.txt format
 - All Lines MUST be a list of Key/Value Pairs seperated by the space character

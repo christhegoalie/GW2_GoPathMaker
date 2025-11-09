@@ -19,6 +19,10 @@ type Point struct {
 	X, Y, Z        float64
 	AllowDuplicate bool
 	Type           ObjectType
+	Tag            string
+	ParentTag      string
+	Cost           int
+	Skip           bool
 }
 
 func GetPositionGeneric(m map[string]any) (float64, float64, float64, error) {
@@ -51,34 +55,50 @@ func GetPositionGeneric(m map[string]any) (float64, float64, float64, error) {
 	return x, y, z, nil
 }
 
-func GetPosition(m map[string]any) (float64, float64, float64, error) {
+// float64, float64, float64, string, string, int,
+func GetPosition(m map[string]any) (Point, error) {
+	out := Point{
+		Tag:       "",
+		ParentTag: "",
+		Skip:      false,
+		Cost:      0,
+	}
 	var xst, yst, zst string
-	var x, y, z float64
 	var ok bool
 	var err error
 
+	out.Tag, _ = utils.MapString(m, "tag")
+	out.ParentTag, _ = utils.MapString(m, "parent")
 	if xst, ok = utils.MapString(m, "xpos"); !ok {
-		return x, y, z, errors.New("xpos not defined")
+		return out, errors.New("xpos not defined")
 	}
 	if yst, ok = utils.MapString(m, "ypos"); !ok {
-		return x, y, z, errors.New("ypos not defined")
+		return out, errors.New("ypos not defined")
 	}
 	if zst, ok = utils.MapString(m, "zpos"); !ok {
-		return x, y, z, errors.New("zpos not defined")
+		return out, errors.New("zpos not defined")
 	}
+	if st, ok := utils.MapString(m, "cost"); ok {
+		if cost64, err := strconv.ParseInt(st, 10, 64); err == nil {
+			out.Cost = int(cost64)
+		}
+	}
+	skip, _ := utils.MapString(m, "skip")
+	out.Skip = skip == "true"
+
 	xst = utils.Trim(xst)
 	yst = utils.Trim(yst)
 	zst = utils.Trim(zst)
-	if x, err = strconv.ParseFloat(xst, 64); err != nil {
-		return x, y, z, errors.New("invalid xpos")
+	if out.X, err = strconv.ParseFloat(xst, 64); err != nil {
+		return out, errors.New("invalid xpos")
 	}
-	if y, err = strconv.ParseFloat(yst, 64); err != nil {
-		return x, y, z, errors.New("invalid ypos")
+	if out.Y, err = strconv.ParseFloat(yst, 64); err != nil {
+		return out, errors.New("invalid ypos")
 	}
-	if z, err = strconv.ParseFloat(zst, 64); err != nil {
-		return x, y, z, errors.New("invalid zpos")
+	if out.Z, err = strconv.ParseFloat(zst, 64); err != nil {
+		return out, errors.New("invalid zpos")
 	}
-	return x, y, z, nil
+	return out, nil
 }
 
 func (src Point) Same(point Point) bool {

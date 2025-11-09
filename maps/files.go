@@ -93,14 +93,15 @@ func ReadPOIs(categories []categories.Category, fileName string) ([]POI, []strin
 
 // Read the "mapinfo.txt" file from the map directory
 // Returns an error if the file is not present, or does not contain a map id (resulting in no markers being generated)
-func ReadMapInfo(path string) (int, string, error) {
+func ReadMapInfo(path string) (int, string, int, error) {
 	var id *int
 	var name *string
 	var fname = fmt.Sprintf("%s/%s", path, files.MapInfoFile)
+	var maxValue int
 
 	b, err := os.ReadFile(fname)
 	if err != nil {
-		return 0, "", err
+		return 0, "", 0, err
 	}
 	lines := strings.Split(string(b), "\n")
 	for _, line := range lines {
@@ -113,27 +114,33 @@ func ReadMapInfo(path string) (int, string, error) {
 		if strings.EqualFold("id", pair[0]) {
 			iVal, err := strconv.ParseInt(utils.Trim(pair[1]), 10, 64)
 			if err != nil {
-				return 0, "", fmt.Errorf("[%s] Invalid map id: %s", fname, pair[1])
+				return 0, "", 0, fmt.Errorf("[%s] Invalid map id: %s", fname, pair[1])
 			}
 			i := int(iVal)
 			id = &i
 		} else if strings.EqualFold("name", pair[0]) {
 			name = &pair[1]
+		} else if strings.EqualFold("max_value", pair[0]) {
+			iVal, err := strconv.ParseInt(utils.Trim(pair[1]), 10, 64)
+			if err != nil {
+				return 0, "", 0, fmt.Errorf("[%s] Invalid max value: %s", fname, pair[1])
+			}
+			maxValue = int(iVal)
 		}
 	}
 	if id == nil {
-		return 0, "", errors.New("mapid not defined")
+		return 0, "", 0, errors.New("mapid not defined")
 	}
 	if name == nil {
 		log.Printf("map %s name not defined, defaulting", fname)
-		return *id, fmt.Sprintf("%d", *id), nil
+		return *id, fmt.Sprintf("%d", *id), maxValue, nil
 	}
-	return *id, *name, nil
+	return *id, *name, maxValue, nil
 }
 
 // Walks the current Maps directory generating all POI and Trail definitions
 func compileMap(categories []categories.Category, path string) (Map, []string, error) {
-	id, name, err := ReadMapInfo(path)
+	id, name, _, err := ReadMapInfo(path)
 	if err != nil {
 		return Map{}, nil, err
 	}

@@ -27,16 +27,20 @@ func SetValidation(f func(fname string) string) {
 func Compile(categories []categories.Category, path string) ([]Map, []string) {
 	out := []Map{}
 	warns := []string{}
-	items, _ := os.ReadDir(path)
-	for _, item := range items {
-		if item.IsDir() {
-			newMap, newWarns, err := compileMap(categories, fmt.Sprintf("%s/%s", path, item.Name()))
-			if err != nil {
-				log.Printf("Failed to load map: %s, Error: %s", item.Name(), err.Error())
-				continue
+	groupings, _ := os.ReadDir(path)
+	for _, group := range groupings {
+		mapPath := fmt.Sprintf("%s/%s", path, group.Name())
+		maps, _ := os.ReadDir(mapPath)
+		for _, item := range maps {
+			if item.IsDir() {
+				newMap, newWarns, err := compileMap(categories, fmt.Sprintf("%s/%s", mapPath, item.Name()))
+				if err != nil {
+					log.Printf("Failed to load map: %s, Error: %s", item.Name(), err.Error())
+					continue
+				}
+				warns = append(warns, newWarns...)
+				out = append(out, newMap)
 			}
-			warns = append(warns, newWarns...)
-			out = append(out, newMap)
 		}
 	}
 	return out, warns

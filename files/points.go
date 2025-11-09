@@ -23,18 +23,18 @@ func ReadPoints(filePath string) []location.Point {
 			continue
 		}
 		vals := utils.ReadMap(s, ' ')
-		x, y, z, e := location.GetPosition(vals)
+		point, e := location.GetPosition(vals)
 		if e != nil {
 			if i > 0 {
-				log.Printf("[%s] Unknown line: ", filePath, e.Error())
+				log.Printf("[%s] Unknown line: %s", filePath, e.Error())
 			}
 			continue
 		}
-		var allowDupe bool
 		if allowDupeSt, ok := utils.MapString(vals, "AllowDuplicate"); ok {
-			allowDupe = allowDupeSt == "1" || strings.EqualFold(allowDupeSt, "true") || strings.EqualFold(allowDupeSt, "yes")
+			point.AllowDuplicate = allowDupeSt == "1" || strings.EqualFold(allowDupeSt, "true") || strings.EqualFold(allowDupeSt, "yes")
 		}
-		out = append(out, location.Point{X: x, Y: y, Z: z, AllowDuplicate: allowDupe})
+		point.Type = location.TypeFromMap(vals)
+		out = append(out, point)
 	}
 	return out
 }
@@ -66,10 +66,10 @@ func ReadPoiPoints(filePath string) []blish.Poi {
 			continue
 		}
 		vals := utils.ReadMap(s, ' ')
-		x, y, z, e := location.GetPosition(vals)
+		point, e := location.GetPosition(vals)
 		if e != nil {
 			if i > 0 {
-				log.Printf("[%s] Unknown line: ", filePath, e.Error())
+				log.Printf("[%s] Unknown line: %s", filePath, e.Error())
 			}
 			continue
 		}
@@ -79,9 +79,9 @@ func ReadPoiPoints(filePath string) []blish.Poi {
 			tmpCat = category
 		}
 		out = append(out, blish.Poi{
-			XPos: x,
-			YPos: y,
-			ZPos: z,
+			XPos: point.X,
+			YPos: point.Y,
+			ZPos: point.Z,
 			Type: tmpCat.(string),
 		})
 	}
@@ -160,16 +160,16 @@ func ReadPTPPoints(filePath string) map[string]location.TypedGroup {
 				continue
 			}
 			vals := utils.ReadMap(s, ' ')
-			x, y, z, e := location.GetPosition(vals)
+			point, e := location.GetPosition(vals)
 			if e != nil {
 				if i > 0 {
-					log.Printf("[%s] Unknown line: ", filePath, e.Error())
+					log.Printf("[%s] Unknown line: %s", filePath, e.Error())
 				}
 				continue
 			}
 
-			p := location.Point{X: x, Y: y, Z: z, AllowDuplicate: false, Type: location.TypeFromMap(vals)}
-			path.AddPoint(p)
+			point.Type = location.TypeFromMap(vals)
+			path.AddPoint(point)
 		}
 
 		if len(path.Points()) > 0 {
@@ -193,18 +193,18 @@ func ReadTypedGroup(filePath string) map[string]location.TypedGroup {
 			continue
 		}
 		vals := utils.ReadMap(s, ' ')
-		x, y, z, e := location.GetPosition(vals)
+		point, e := location.GetPosition(vals)
 		if e != nil {
-			log.Printf("[%s] Unknown line: ", filePath, e.Error())
+			log.Printf("[%s] Unknown line: %s", filePath, e.Error())
 			continue
 		}
-		pt := location.Point{X: x, Y: y, Z: z, Type: location.TypeFromMap(vals)}
+		point.Type = location.TypeFromMap(vals)
 		if name, ok := utils.MapString(vals, "name"); ok {
 			if v, ok := out[name]; ok {
-				v.AddPoint(pt)
+				v.AddPoint(point)
 				out[name] = v
 			} else {
-				v := location.NewGroup(name, pt)
+				v := location.NewGroup(name, point)
 				out[name] = v
 			}
 		} else {
