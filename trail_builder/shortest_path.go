@@ -18,12 +18,13 @@ func SaveShortestTrail(
 	paths map[string]location.TypedGroup,
 	ptpPaths map[string]location.TypedGroup,
 	baseFileName string,
-	extension string) error {
+	extension string,
+	maxValue int) error {
 
 	location.SetGlobals(barriers, paths, waypoints, ptpPaths)
 	defer location.ResetGlobals()
 
-	g := location.Path(pois).ToGraph()
+	g := location.Path(pois).ToGraph(maxValue)
 	g.AddWaypoints(waypoints)
 	pathList := g.GetPaths()
 
@@ -40,7 +41,7 @@ func SaveShortestTrail(
 		go func() {
 			log.Printf("[%d] Starting distance: %.2f", index+1, p.EndDistance())
 			defer wg.Add(-1)
-			for p.Optimize(false) {
+			for p.Optimize(false, maxValue) {
 			}
 			log.Printf("[%d] Final map distance: %.2f", index+1, p.EndDistance())
 		}()

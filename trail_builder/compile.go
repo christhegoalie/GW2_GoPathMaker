@@ -95,8 +95,11 @@ func compileAutoPaths(srcPath string) error {
 		}
 
 		mapName = utils.Trim(mapName)
-		mapPath := fmt.Sprintf("%s%s", mapsPath, mapName)
-		mapId, _, err := maps.ReadMapInfo(mapPath)
+		mapPath, err := findMapPath(mapsPath, mapName)
+		if err != nil {
+			return err
+		}
+		mapId, _, mapMaxValue, err := maps.ReadMapInfo(mapPath)
 		if err != nil {
 			return err
 		}
@@ -162,7 +165,7 @@ func compileAutoPaths(srcPath string) error {
 
 		files.RemoveWithExtension(baseDstPath, filePrefix, files.TrailExtension)
 		os.MkdirAll(filepath.Dir(templateOutputFileName), fs.ModePerm)
-		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, ptpPaths, templateOutputFileName, files.TrailExtension)
+		err = SaveShortestTrail(mapId, waypoints, pois, barriers, paths, ptpPaths, templateOutputFileName, files.TrailExtension, mapMaxValue)
 		if err != nil {
 			log.Printf("Error saving compiled resource: %s, Error: %s", f, err.Error())
 			continue
@@ -205,4 +208,27 @@ func checkForDuplicates(pts []location.Point) error {
 		}
 	}
 	return err
+}
+
+func findMapPath(basePath string, mapName string) (string, error) {
+	files, err := os.ReadDir(basePath)
+	if err != nil {
+		return "", err
+	}
+
+	for _, group := range files {
+		if group.IsDir() {
+			groupPath := fmt.Sprintf("%s%s", basePath, group.Name())
+			maps, err := os.ReadDir(groupPath)
+			if err != nil {
+				return "", err
+			}
+			for _, item := range maps {
+				if item.IsDir() && item.Name() == mapName {
+					return fmt.Sprintf("%s/%s", groupPath, mapName), nil
+				}
+			}
+		}
+	}
+	return "", errors.New("map not found")
 }
