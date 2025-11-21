@@ -230,5 +230,5 @@ func findMapPath(basePath string, mapName string) (string, error) {
 			}
 		}
 	}
-	return "", errors.New("map not found")
+	return "", fmt.Errorf("map %s not found", mapName)
 }
